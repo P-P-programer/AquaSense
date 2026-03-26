@@ -1,0 +1,428 @@
+/* ============================================
+   AquaSense - Sistema de Monitoreo IoT
+   Paleta institucional azul agua
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --azul-profundo:   #0d2b55;
+  --azul-institucional: #1a56db;
+  --azul-agua:       #0ea5e9;
+  --azul-claro:      #e0f2fe;
+  --fondo:           #f0f7ff;
+  --blanco:          #ffffff;
+  --alerta-ok:       #10b981;
+  --alerta-warn:     #f59e0b;
+  --alerta-danger:   #ef4444;
+  --texto-primario:  #0d2b55;
+  --texto-secundario:#4b6a8a;
+  --borde:           #bcd4f0;
+  --sombra:          0 2px 16px rgba(13,43,85,0.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--fondo);
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: var(--texto-primario);
+  margin: 0;
+}
+
+/* ── Navbar ─────────────────────────────── */
+.aq-navbar {
+  background: var(--azul-profundo);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.aq-navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--blanco);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.aq-navbar-brand i {
+  color: var(--azul-agua);
+  font-size: 1.4rem;
+}
+
+.aq-navbar-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--azul-agua);
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+}
+
+/* ── Welcome Page ────────────────────────── */
+.aq-welcome {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--azul-profundo) 0%, #1a4480 60%, #1a56db 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.aq-welcome-logo {
+  font-size: 3.5rem;
+  font-weight: 600;
+  color: var(--blanco);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.aq-welcome-logo span {
+  color: var(--azul-agua);
+}
+
+.aq-welcome-sub {
+  color: rgba(255,255,255,0.70);
+  font-size: 1rem;
+  margin-bottom: 2.5rem;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.aq-welcome-icons {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.aq-icon-card {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 1.2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  backdrop-filter: blur(8px);
+}
+
+.aq-icon-card i {
+  font-size: 2rem;
+}
+
+.aq-icon-card span {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aq-btn-primary {
+  background: var(--azul-agua);
+  color: var(--azul-profundo);
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 2.5rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.aq-btn-primary:hover {
+  background: #38bdf8;
+  transform: translateY(-1px);
+}
+
+/* ── Login Page ──────────────────────────── */
+.aq-login {
+  min-height: 100vh;
+  background: var(--fondo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aq-login-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--sombra);
+}
+
+.aq-login-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--azul-profundo);
+  margin-bottom: 0.3rem;
+}
+
+.aq-login-sub {
+  font-size: 0.82rem;
+  color: var(--texto-secundario);
+  margin-bottom: 1.8rem;
+}
+
+.aq-input {
+  width: 100%;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.9rem;
+  color: var(--texto-primario);
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.aq-input:focus {
+  border-color: var(--azul-institucional);
+}
+
+.aq-input-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--texto-secundario);
+  margin-bottom: 0.3rem;
+  display: block;
+  letter-spacing: 0.03em;
+}
+
+/* ── Dashboard ───────────────────────────── */
+.aq-dashboard {
+  padding: 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.aq-page-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--azul-profundo);
+  margin-bottom: 0.2rem;
+}
+
+.aq-page-sub {
+  font-size: 0.82rem;
+  color: var(--texto-secundario);
+  margin-bottom: 1.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── Stat Cards ──────────────────────────── */
+.aq-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.aq-stat-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.aq-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-secundario);
+  font-weight: 500;
+}
+
+.aq-stat-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--azul-profundo);
+  line-height: 1.1;
+}
+
+.aq-stat-unit {
+  font-size: 0.78rem;
+  color: var(--texto-secundario);
+}
+
+.aq-stat-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-top: 0.3rem;
+}
+
+.aq-stat-indicator.ok    { color: var(--alerta-ok); }
+.aq-stat-indicator.warn  { color: var(--alerta-warn); }
+.aq-stat-indicator.danger{ color: var(--alerta-danger); }
+
+.aq-stat-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--azul-claro);
+  margin-top: 0.6rem;
+  overflow: hidden;
+}
+
+.aq-stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--azul-agua);
+}
+
+/* ── Panel cards ─────────────────────────── */
+.aq-panel {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.4rem;
+  box-shadow: var(--sombra);
+  margin-bottom: 1rem;
+}
+
+.aq-panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--azul-profundo);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aq-panel-title i {
+  color: var(--azul-agua);
+}
+
+/* ── Table ───────────────────────────────── */
+.aq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.aq-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--texto-secundario);
+  font-weight: 500;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 2px solid var(--borde);
+}
+
+.aq-table td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--azul-claro);
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--texto-primario);
+}
+
+.aq-table tr:hover td {
+  background: var(--azul-claro);
+}
+
+/* ── Badge estado ────────────────────────── */
+.aq-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.aq-badge.ok     { background: #d1fae5; color: #065f46; }
+.aq-badge.warn   { background: #fef3c7; color: #92400e; }
+.aq-badge.danger { background: #fee2e2; color: #991b1b; }
+
+/* ── Chart bar simple ────────────────────── */
+.aq-bar-chart { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.aq-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+}
+
+.aq-bar-label {
+  width: 70px;
+  text-align: right;
+  color: var(--texto-secundario);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.aq-bar-track {
+  flex: 1;
+  height: 18px;
+  background: var(--azul-claro);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.aq-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--azul-institucional), var(--azul-agua));
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.aq-bar-val {
+  width: 50px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--texto-primario);
+}
+
+/* ── Loading ─────────────────────────────── */
+.aq-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}
+
+.aq-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--borde);
+  border-top-color: var(--azul-agua);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 768px) {
+  .aq-dashboard { padding: 1rem; }
+  .aq-welcome-icons { flex-direction: column; gap: 1rem; }
+  .aq-stats-grid { grid-template-columns: 1fr 1fr; }
+}

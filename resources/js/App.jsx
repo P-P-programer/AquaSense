@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import WelcomePage from './components/WelcomePage';
 import LoginPage from './components/LoginPage';
 import DashboardPage from './components/DashboardPage';
-
-// ... todos tus componentes igual ...
+import '../css/aquasense.css'; 
 
 export default function App() {
   const [page, setPage] = useState("welcome");
 
   if (page === "welcome") return <WelcomePage onLogin={() => setPage("login")} />;
-  if (page === "login") return <LoginPage onEnter={() => setPage("dashboard")} />;
-  return <DashboardPage />;
+  if (page === "login")   return <LoginPage onEnter={() => setPage("dashboard")} />;
+  return <DashboardPage onLogout={() => setPage("welcome")} />;
 }
-// ❌ Quita las últimas 2 líneas de createRoot de aquí
