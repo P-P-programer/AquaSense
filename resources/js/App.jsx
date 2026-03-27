@@ -10,4 +10,10 @@ export default function App() {
   if (page === "welcome") return <WelcomePage onLogin={() => setPage("login")} />;
   if (page === "login")   return <LoginPage onEnter={() => setPage("dashboard")} />;
   return <DashboardPage onLogout={() => setPage("welcome")} />;
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
 }
