@@ -1,22 +1,24 @@
 import { useEffect, useState } from "react";
-
-const MOCK_DATA = [
-  { fecha: "19 Jun", consumo: 380 },
-  { fecha: "20 Jun", consumo: 420 },
-  { fecha: "21 Jun", consumo: 390 },
-  { fecha: "22 Jun", consumo: 510 },
-  { fecha: "23 Jun", consumo: 445 },
-  { fecha: "24 Jun", consumo: 398 },
-  { fecha: "25 Jun", consumo: 415 },
-];
+import api from "../services/api";
 
 export default function ChartComponent() {
-  const [data, setData] = useState([]);
+  const [data,  setData]  = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // fetch("/api/registros").then(r => r.json()).then(setData);
-    setTimeout(() => setData(MOCK_DATA), 700);
+    api.getRegistros()
+      .then(registros => {
+        // Toma los últimos 7 registros para la gráfica
+        setData(registros.slice(-7));
+      })
+      .catch(err => setError(err.message));
   }, []);
+
+  if (error) return (
+    <div className="aq-alert-error">
+      <i className="bi bi-exclamation-triangle"></i> Error cargando gráfica: {error}
+    </div>
+  );
 
   if (!data.length) return (
     <div className="aq-loading">

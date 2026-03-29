@@ -1,19 +1,50 @@
-import { useState } from "react";
-import WelcomePage from './components/WelcomePage';
-import LoginPage from './components/LoginPage';
-import DashboardPage from './components/DashboardPage';
-import '../css/aquasense.css'; 
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import LoginPage from "./components/LoginPage";
+import WelcomePage from "./components/WelcomePage";
+import DashboardPage from "./components/DashboardPage";
+import '../css/aquasense.css';
+
+/**
+ * Router interno basado en estado de autenticación.
+ * No usa react-router — si lo tienes instalado puedes
+ * reemplazar esto por <Routes> y <Navigate> según prefieras.
+ */
+function AppRouter() {
+  const { user, loading } = useAuth();
+
+  // Mientras verifica sesión existente (llamada a /api/me al montar)
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0b1520",
+        color: "#5a7a95",
+        fontFamily: "monospace",
+        fontSize: "0.85rem",
+        gap: "0.75rem",
+      }}>
+        <span className="aq-spinner"></span>
+        Iniciando sistema...
+      </div>
+    );
+  }
+
+  // Autenticado → dashboard
+  if (user) return <DashboardPage />;
+
+  // No autenticado → welcome + login
+  // WelcomePage ya no necesita prop onLogin — LoginPage es independiente
+  // Si tu WelcomePage tiene un botón "Acceder", muéstralo aquí con estado local
+  return <LoginPage />;
+}
 
 export default function App() {
-  const [page, setPage] = useState("welcome");
-
-  if (page === "welcome") return <WelcomePage onLogin={() => setPage("login")} />;
-  if (page === "login")   return <LoginPage onEnter={() => setPage("dashboard")} />;
-  return <DashboardPage onLogout={() => setPage("welcome")} />;
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+  );
 }

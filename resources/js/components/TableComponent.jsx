@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
-
-const MOCK_DATA = [
-  { fecha: "25 Jun 2025", consumo: 415, ph: 7.2, turbidez: 0.8, estado: "ok" },
-  { fecha: "24 Jun 2025", consumo: 398, ph: 7.4, turbidez: 1.1, estado: "ok" },
-  { fecha: "23 Jun 2025", consumo: 445, ph: 6.8, turbidez: 2.4, estado: "warn" },
-  { fecha: "22 Jun 2025", consumo: 510, ph: 7.0, turbidez: 0.9, estado: "ok" },
-  { fecha: "21 Jun 2025", consumo: 390, ph: 8.1, turbidez: 4.2, estado: "warn" },
-  { fecha: "20 Jun 2025", consumo: 420, ph: 7.3, turbidez: 0.7, estado: "ok" },
-];
+import api from "../services/api";
 
 const estadoLabel = { ok: "Normal", warn: "Alerta", danger: "Crítico" };
 
 export default function TableComponent() {
-  const [data, setData] = useState([]);
+  const [data,  setData]  = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // fetch("/api/registros").then(r => r.json()).then(setData);
-    setTimeout(() => setData(MOCK_DATA), 500);
+    api.getRegistros()
+      .then(registros => {
+        // Muestra los 6 más recientes, del más nuevo al más viejo
+        setData([...registros].reverse().slice(0, 6));
+      })
+      .catch(err => setError(err.message));
   }, []);
+
+  if (error) return (
+    <div className="aq-alert-error">
+      <i className="bi bi-exclamation-triangle"></i> Error cargando registros: {error}
+    </div>
+  );
 
   if (!data.length) return (
     <div className="aq-loading">
@@ -47,11 +50,11 @@ export default function TableComponent() {
             <tr key={i}>
               <td>{r.fecha}</td>
               <td>{r.consumo}</td>
-              <td>{r.ph}</td>
-              <td>{r.turbidez} NTU</td>
+              <td>{r.ph ?? "—"}</td>
+              <td>{r.turbidez != null ? `${r.turbidez} NTU` : "—"}</td>
               <td>
-                <span className={`aq-badge ${r.estado}`}>
-                  {estadoLabel[r.estado]}
+                <span className={`aq-badge ${r.estado ?? "ok"}`}>
+                  {estadoLabel[r.estado] ?? "Normal"}
                 </span>
               </td>
             </tr>

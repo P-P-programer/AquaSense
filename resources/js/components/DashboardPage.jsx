@@ -1,8 +1,11 @@
+import { useAuth } from "../context/AuthContext";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
 
-function Navbar({ onLogout }) {
+function Navbar() {
+  const { user, logout, isAdmin } = useAuth();
+
   return (
     <nav className="aq-navbar">
       <div className="aq-navbar-brand">
@@ -11,12 +14,22 @@ function Navbar({ onLogout }) {
         <span className="aq-navbar-badge">v1.0 · IOT</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        {/* Rol visible */}
+        {isAdmin() && (
+          <span style={{ color: "#7dd3fc", fontSize: "0.72rem", fontFamily: "monospace", letterSpacing: "0.06em" }}>
+            ADMIN
+          </span>
+        )}
         <span style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.78rem" }}>
           <i className="bi bi-circle-fill" style={{ color: "#10b981", fontSize: "0.5rem", marginRight: 4 }}></i>
           ESP32 conectado
         </span>
+        {/* Nombre del usuario */}
+        <span style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.78rem" }}>
+          {user?.name ?? user?.email}
+        </span>
         <button
-          onClick={onLogout}
+          onClick={logout}
           style={{
             background: "transparent",
             border: "1px solid rgba(255,255,255,0.2)",
@@ -34,10 +47,10 @@ function Navbar({ onLogout }) {
   );
 }
 
-export default function DashboardPage({ onLogout }) {
+export default function DashboardPage() {
   return (
     <>
-      <Navbar onLogout={onLogout} />
+      <Navbar />
       <div className="aq-dashboard">
         <div className="aq-page-title">Panel de monitoreo</div>
         <div className="aq-page-sub">

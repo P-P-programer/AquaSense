@@ -1,12 +1,33 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
-export default function LoginPage({ onEnter }) {
-  const [usuario, setUsuario] = useState("");
+export default function LoginPage() {
+  const { login } = useAuth();
+
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
+  const [error,    setError]    = useState(null);
+  const [loading,  setLoading]  = useState(false);
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      // El AuthContext actualiza `user` → App.jsx redirige al dashboard automáticamente
+    } catch (err) {
+      setError(err.message ?? "Credenciales incorrectas o cuenta inactiva.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="aq-login">
       <div className="aq-login-card">
+
         <div style={{ marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: 10 }}>
           <i className="bi bi-droplet-fill" style={{ color: "var(--azul-agua)", fontSize: "1.6rem" }}></i>
           <span style={{ fontWeight: 600, fontSize: "1.1rem", color: "var(--azul-profundo)", letterSpacing: "0.04em" }}>
@@ -17,31 +38,51 @@ export default function LoginPage({ onEnter }) {
         <div className="aq-login-title">Iniciar sesión</div>
         <p className="aq-login-sub">Sistema de monitoreo de agua — acceso restringido</p>
 
-        <label className="aq-input-label">Usuario</label>
-        <input
-          className="aq-input"
-          type="text"
-          placeholder="usuario@entidad.gov"
-          value={usuario}
-          onChange={e => setUsuario(e.target.value)}
-        />
+        {error && (
+          <div className="aq-alert-error">
+            <i className="bi bi-exclamation-circle"></i> {error}
+          </div>
+        )}
 
-        <label className="aq-input-label">Contraseña</label>
-        <input
-          className="aq-input"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
+        {/* Usar form + onSubmit permite submit con Enter */}
+        <form onSubmit={handleLogin} noValidate>
+          <label className="aq-input-label">Correo electrónico</label>
+          <input
+            className="aq-input"
+            type="email"
+            placeholder="usuario@entidad.gov"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+            disabled={loading}
+          />
 
-        <button
-          className="aq-btn-primary"
-          style={{ width: "100%", marginTop: "0.5rem" }}
-          onClick={onEnter}
-        >
-          Ingresar
-        </button>
+          <label className="aq-input-label" style={{ marginTop: "1rem" }}>Contraseña</label>
+          <input
+            className="aq-input"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            disabled={loading}
+          />
+
+          <button
+            type="submit"
+            className="aq-btn-primary"
+            style={{ width: "100%", marginTop: "1.25rem" }}
+            disabled={loading}
+          >
+            {loading ? (
+              <><span className="aq-spinner-sm"></span> Verificando...</>
+            ) : (
+              "Ingresar"
+            )}
+          </button>
+        </form>
 
         <p style={{ fontSize: "0.72rem", color: "var(--texto-secundario)", textAlign: "center", marginTop: "1.2rem" }}>
           <i className="bi bi-shield-lock"></i> Acceso cifrado · Solo personal autorizado
