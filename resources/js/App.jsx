@@ -1,18 +1,14 @@
+import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./components/LoginPage";
 import WelcomePage from "./components/WelcomePage";
 import DashboardPage from "./components/DashboardPage";
 import '../css/aquasense.css';
 
-/**
- * Router interno basado en estado de autenticación.
- * No usa react-router — si lo tienes instalado puedes
- * reemplazar esto por <Routes> y <Navigate> según prefieras.
- */
 function AppRouter() {
   const { user, loading } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
 
-  // Mientras verifica sesión existente (llamada a /api/me al montar)
   if (loading) {
     return (
       <div style={{
@@ -32,12 +28,12 @@ function AppRouter() {
     );
   }
 
-  // Autenticado → dashboard
   if (user) return <DashboardPage />;
 
-  // No autenticado → welcome + login
-  // WelcomePage ya no necesita prop onLogin — LoginPage es independiente
-  // Si tu WelcomePage tiene un botón "Acceder", muéstralo aquí con estado local
+  // Si no está autenticado, primero muestra WelcomePage, luego LoginPage si el usuario lo pide
+  if (!showLogin) {
+    return <WelcomePage onLogin={() => setShowLogin(true)} />;
+  }
   return <LoginPage />;
 }
 

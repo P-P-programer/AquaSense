@@ -21,6 +21,6 @@ Route::prefix('api')->group(function () {
     });
 });
 Route::get('/{any}', function () {
-    return view('welcome');
+    return view('welcome'); 
 })->where('any', '.*');
 
