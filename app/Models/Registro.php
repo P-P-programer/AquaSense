@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Registro extends Model
 {
     protected $table = 'registros';
 
     protected $fillable = [
+        'device_id',
         'captured_at',
         'ph',
         'consumo',
@@ -27,5 +29,10 @@ class Registro extends Model
             'turbidez' => 'decimal:2',
             'temperatura' => 'decimal:2',
         ];
+    }
+
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
     }
 }

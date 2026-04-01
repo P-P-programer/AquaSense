@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Api\DeviceIngestController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use Illuminate\Support\Facades\Route;
@@ -26,3 +27,7 @@ Route::middleware('web')->group(function () {
         // Route::apiResource('users', AdminUserController::class);
     });
 });
+
+    Route::post('/devices/ingest', [DeviceIngestController::class, 'store'])
+        ->middleware('throttle:120,1')
+        ->name('api.devices.ingest');
