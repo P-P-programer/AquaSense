@@ -14,8 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            RegistrosSeeder::class,
-        ]);
+        // Intencionalmente vacío por ahora.
+        // En este primer commit no se cargan seeders demo.
     }
 }
