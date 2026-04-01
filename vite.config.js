@@ -10,9 +10,24 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    build: {
+        // Rollup output config para asegurar hashes en assets
+        outDir: 'public/build',
+        rollupOptions: {
+            output: {
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash][extname]',
+            }
+        }
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
+        },
+        hmr: {
+            host: 'localhost',
+            port: 5173,
         },
     },
 });
