@@ -1,0 +1,452 @@
+import { useEffect, useMemo, useState } from "react";
+import api from "../services/api";
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function isOnline(lastSeenAt) {
+  if (!lastSeenAt) return false;
+  const diffMs = Date.now() - new Date(lastSeenAt).getTime();
+  return diffMs <= 60000;
+}
+
+function StatusChip({ online, labelOnline = "online", labelOffline = "offline" }) {
+  return <span className={`aq-state-chip ${online ? "online" : "offline"}`}>{online ? labelOnline : labelOffline}</span>;
+}
+
+export default function AdminPanel() {
+  const [users, setUsers] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [tokens, setTokens] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  const [generatedToken, setGeneratedToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [userForm, setUserForm] = useState({
+    id: null,
+    name: "",
+    email: "",
+    password: "",
+    role: "user",
+    is_active: true,
+  });
+
+  const [deviceForm, setDeviceForm] = useState({
+    id: null,
+    user_id: "",
+    name: "",
+    identifier: "",
+    is_active: true,
+  });
+
+  const selectedDevice = useMemo(
+    () => devices.find((device) => device.id === selectedDeviceId) ?? null,
+    [devices, selectedDeviceId],
+  );
+
+  async function loadAll() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [usersData, devicesData] = await Promise.all([
+        api.getAdminUsers(),
+        api.getAdminDevices(),
+      ]);
+
+      setUsers(usersData);
+      setDevices(devicesData);
+
+      if (selectedDeviceId) {
+        const tokensData = await api.getAdminDeviceTokens(selectedDeviceId);
+        setTokens(tokensData);
+      }
+    } catch (err) {
+      setError(err.message ?? "No se pudieron cargar los datos del admin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDeviceId) {
+      setTokens([]);
+      return;
+    }
+
+    api.getAdminDeviceTokens(selectedDeviceId)
+      .then(setTokens)
+      .catch((err) => setError(err.message ?? "No se pudieron cargar los tokens."));
+  }, [selectedDeviceId]);
+
+  function resetUserForm() {
+    setUserForm({
+      id: null,
+      name: "",
+      email: "",
+      password: "",
+      role: "user",
+      is_active: true,
+    });
+  }
+
+  function resetDeviceForm() {
+    setDeviceForm({
+      id: null,
+      user_id: "",
+      name: "",
+      identifier: "",
+      is_active: true,
+    });
+  }
+
+  function editUser(user) {
+    setUserForm({
+      id: user.id,
+      name: user.name ?? "",
+      email: user.email ?? "",
+      password: "",
+      role: user.role ?? "user",
+      is_active: Boolean(user.is_active),
+    });
+  }
+
+  function editDevice(device) {
+    setDeviceForm({
+      id: device.id,
+      user_id: device.user_id ?? "",
+      name: device.name ?? "",
+      identifier: device.identifier ?? "",
+      is_active: Boolean(device.is_active),
+    });
+    setSelectedDeviceId(device.id);
+  }
+
+  async function submitUser(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role,
+        is_active: userForm.is_active,
+      };
+
+      if (userForm.password.trim()) {
+        payload.password = userForm.password;
+      }
+
+      if (userForm.id) {
+        await api.updateAdminUser(userForm.id, payload);
+      } else {
+        await api.createAdminUser({ ...payload, password: userForm.password });
+      }
+
+      await loadAll();
+      resetUserForm();
+    } catch (err) {
+      setError(err.message ?? "No se pudo guardar el usuario.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function submitDevice(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const payload = {
+        user_id: deviceForm.user_id ? Number(deviceForm.user_id) : null,
+        name: deviceForm.name,
+        identifier: deviceForm.identifier || undefined,
+        is_active: deviceForm.is_active,
+      };
+
+      if (deviceForm.id) {
+        await api.updateAdminDevice(deviceForm.id, payload);
+      } else {
+        await api.createAdminDevice(payload);
+      }
+
+      await loadAll();
+      resetDeviceForm();
+    } catch (err) {
+      setError(err.message ?? "No se pudo guardar el dispositivo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function generateToken(e) {
+    e.preventDefault();
+    if (!selectedDeviceId) return;
+
+    setSaving(true);
+    setError(null);
+    setGeneratedToken(null);
+
+    try {
+      const response = await api.createAdminDeviceToken(selectedDeviceId, {
+        label: e.target.label.value,
+      });
+
+      setGeneratedToken(response);
+      setTokens((current) => [response.device_token, ...current]);
+      e.target.reset();
+    } catch (err) {
+      setError(err.message ?? "No se pudo generar el token.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function revokeToken(tokenId) {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await api.revokeAdminDeviceToken(tokenId);
+      const freshTokens = await api.getAdminDeviceTokens(selectedDeviceId);
+      setTokens(freshTokens);
+    } catch (err) {
+      setError(err.message ?? "No se pudo revocar el token.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const onlineCount = devices.filter((device) => isOnline(device.last_seen_at)).length;
+
+  return (
+    <section className="aq-admin-shell">
+      <div className="aq-admin-header">
+        <div>
+          <div className="aq-section-kicker">Panel admin</div>
+          <h2 className="aq-section-title">Usuarios, dispositivos y tokens</h2>
+          <p className="aq-section-sub">Administra accesos y valida el estado del ESP32 desde un solo lugar.</p>
+        </div>
+
+        <div className="aq-admin-summary">
+          <div className="aq-admin-summary-card">
+            <span>Usuarios</span>
+            <strong>{users.length}</strong>
+          </div>
+          <div className="aq-admin-summary-card">
+            <span>Dispositivos</span>
+            <strong>{devices.length}</strong>
+          </div>
+          <div className="aq-admin-summary-card">
+            <span>Online</span>
+            <strong>{onlineCount}</strong>
+          </div>
+        </div>
+      </div>
+
+      {error && <div className="aq-alert-error"><i className="bi bi-exclamation-triangle"></i> {error}</div>}
+      {loading && <div className="aq-loading"><div className="aq-spinner"></div> Cargando panel admin...</div>}
+
+      <div className="aq-admin-grid">
+        <div className="aq-admin-card">
+          <div className="aq-panel-title"><i className="bi bi-person-plus"></i> Usuarios</div>
+          <form onSubmit={submitUser} className="aq-admin-form">
+            <div className="aq-admin-form-grid">
+              <div>
+                <label className="aq-input-label">Nombre</label>
+                <input className="aq-input" value={userForm.name} onChange={(e) => setUserForm((cur) => ({ ...cur, name: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="aq-input-label">Correo</label>
+                <input className="aq-input" type="email" value={userForm.email} onChange={(e) => setUserForm((cur) => ({ ...cur, email: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="aq-input-label">Contraseña {userForm.id ? "(opcional)" : ""}</label>
+                <input className="aq-input" type="password" minLength={userForm.id ? 0 : 8} value={userForm.password} onChange={(e) => setUserForm((cur) => ({ ...cur, password: e.target.value }))} placeholder={userForm.id ? "Dejar vacío para no cambiar" : "Mínimo 8 caracteres"} required={!userForm.id} />
+              </div>
+              <div>
+                <label className="aq-input-label">Rol</label>
+                <select className="aq-input" value={userForm.role} onChange={(e) => setUserForm((cur) => ({ ...cur, role: e.target.value }))}>
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+            </div>
+
+            <label className="aq-switch-row">
+              <input type="checkbox" checked={userForm.is_active} onChange={(e) => setUserForm((cur) => ({ ...cur, is_active: e.target.checked }))} />
+              <span>Usuario activo</span>
+            </label>
+
+            <div className="aq-admin-actions">
+              <button type="submit" className="aq-btn-primary" disabled={saving}>{userForm.id ? "Actualizar usuario" : "Crear usuario"}</button>
+              <button type="button" className="aq-btn-secondary" onClick={resetUserForm}>Limpiar</button>
+            </div>
+          </form>
+
+          <div className="aq-admin-table-wrap">
+            <table className="aq-table aq-admin-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Dispositivos</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <strong>{user.name}</strong>
+                      <div className="aq-table-meta">{user.email}</div>
+                    </td>
+                    <td>{user.role}</td>
+                    <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
+                    <td>{user.devices_count ?? 0}</td>
+                    <td>
+                      <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="aq-admin-card">
+          <div className="aq-panel-title"><i className="bi bi-cpu"></i> Dispositivos</div>
+          <form onSubmit={submitDevice} className="aq-admin-form">
+            <div className="aq-admin-form-grid">
+              <div>
+                <label className="aq-input-label">Propietario</label>
+                <select className="aq-input" value={deviceForm.user_id} onChange={(e) => setDeviceForm((cur) => ({ ...cur, user_id: e.target.value }))}>
+                  <option value="">Sin asignar</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="aq-input-label">Nombre</label>
+                <input className="aq-input" value={deviceForm.name} onChange={(e) => setDeviceForm((cur) => ({ ...cur, name: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="aq-input-label">Identificador</label>
+                <input className="aq-input" value={deviceForm.identifier} onChange={(e) => setDeviceForm((cur) => ({ ...cur, identifier: e.target.value }))} placeholder="Se genera solo si lo dejas vacío" />
+              </div>
+              <div>
+                <label className="aq-input-label">Estado</label>
+                <div className="aq-switch-row">
+                  <input type="checkbox" checked={deviceForm.is_active} onChange={(e) => setDeviceForm((cur) => ({ ...cur, is_active: e.target.checked }))} />
+                  <span>Dispositivo activo</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="aq-admin-actions">
+              <button type="submit" className="aq-btn-primary" disabled={saving}>{deviceForm.id ? "Actualizar dispositivo" : "Crear dispositivo"}</button>
+              <button type="button" className="aq-btn-secondary" onClick={resetDeviceForm}>Limpiar</button>
+            </div>
+          </form>
+
+          <div className="aq-admin-table-wrap">
+            <table className="aq-table aq-admin-table">
+              <thead>
+                <tr>
+                  <th>Dispositivo</th>
+                  <th>Propietario</th>
+                  <th>Última señal</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {devices.map((device) => {
+                  const online = isOnline(device.last_seen_at);
+
+                  return (
+                    <tr key={device.id} className={selectedDeviceId === device.id ? "is-selected" : ""}>
+                      <td>
+                        <strong>{device.name}</strong>
+                        <div className="aq-table-meta">{device.identifier}</div>
+                      </td>
+                      <td>{device.user?.name ?? "Sin asignar"}</td>
+                      <td>{formatDate(device.last_seen_at)}</td>
+                      <td><StatusChip online={online} /></td>
+                      <td>
+                        <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
+                        <button type="button" className="aq-link-button" onClick={() => setSelectedDeviceId(device.id)}>
+                          Tokens
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="aq-admin-card aq-admin-card-wide">
+        <div className="aq-admin-token-head">
+          <div>
+            <div className="aq-panel-title"><i className="bi bi-key"></i> Tokens del dispositivo</div>
+            <div className="aq-table-meta">
+              {selectedDevice ? `${selectedDevice.name} · ${selectedDevice.identifier}` : "Selecciona un dispositivo para ver o generar tokens."}
+            </div>
+          </div>
+          <StatusChip online={Boolean(selectedDevice && isOnline(selectedDevice.last_seen_at))} labelOnline="activo" labelOffline="sin señal" />
+        </div>
+
+        {selectedDevice && (
+          <form onSubmit={generateToken} className="aq-admin-token-form">
+            <input className="aq-input" name="label" placeholder="Etiqueta del token (ej. ESP32 principal)" />
+            <button type="submit" className="aq-btn-primary" disabled={saving}>Generar token</button>
+          </form>
+        )}
+
+        {generatedToken?.token && (
+          <div className="aq-token-box">
+            <span className="aq-token-label">Token generado una sola vez</span>
+            <code>{generatedToken.token}</code>
+          </div>
+        )}
+
+        <div className="aq-admin-token-list">
+          {tokens.map((token) => (
+            <div className="aq-token-item" key={token.id}>
+              <div>
+                <strong>{token.label || `Token ${token.id}`}</strong>
+                <div className="aq-table-meta">Prefijo: {token.token_prefix || "—"} · Último uso: {formatDate(token.last_used_at)}</div>
+                <div className="aq-table-meta">Revocado: {token.revoked_at ? formatDate(token.revoked_at) : "No"}</div>
+              </div>
+              <button
+                type="button"
+                className="aq-btn-secondary"
+                onClick={() => revokeToken(token.id)}
+                disabled={saving || Boolean(token.revoked_at)}
+              >
+                {token.revoked_at ? "Revocado" : "Revocar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

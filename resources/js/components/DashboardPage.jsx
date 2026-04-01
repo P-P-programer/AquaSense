@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import AdminPanel from "./AdminPanel";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
@@ -48,6 +49,8 @@ function Navbar() {
 }
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth();
+
   return (
     <>
       <Navbar />
@@ -58,6 +61,8 @@ export default function DashboardPage() {
         </div>
 
         <StatsComponent />
+
+        {isAdmin() && <AdminPanel />}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <ChartComponent />

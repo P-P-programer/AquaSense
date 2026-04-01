@@ -73,6 +73,7 @@ const api = {
   get: (path) => request("GET", path),
   post: (path, body) => request("POST", path, body),
   put: (path, body) => request("PUT", path, body),
+  patch: (path, body) => request("PATCH", path, body),
   delete: (path) => request("DELETE", path),
 
   login: (email, password) => api.post("/login", { email, password }),
@@ -80,6 +81,18 @@ const api = {
   me: () => api.get("/me"),
   getStats: () => api.get("/stats"),
   getRegistros: () => api.get("/registros"),
+
+  getAdminUsers: () => api.get("/admin/users"),
+  createAdminUser: (payload) => api.post("/admin/users", payload),
+  updateAdminUser: (userId, payload) => api.patch(`/admin/users/${userId}`, payload),
+
+  getAdminDevices: () => api.get("/admin/devices"),
+  createAdminDevice: (payload) => api.post("/admin/devices", payload),
+  updateAdminDevice: (deviceId, payload) => api.patch(`/admin/devices/${deviceId}`, payload),
+
+  getAdminDeviceTokens: (deviceId) => api.get(`/admin/devices/${deviceId}/tokens`),
+  createAdminDeviceToken: (deviceId, payload) => api.post(`/admin/devices/${deviceId}/tokens`, payload),
+  revokeAdminDeviceToken: (deviceTokenId) => api.patch(`/admin/device-tokens/${deviceTokenId}/revoke`),
 };
 
 export default api;

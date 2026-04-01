@@ -45,7 +45,7 @@ export default function LoginPage() {
         )}
 
         {/* Usar form + onSubmit permite submit con Enter */}
-        <form onSubmit={handleLogin} noValidate>
+        <form onSubmit={handleLogin}>
           <label className="aq-input-label">Correo electrónico</label>
           <input
             className="aq-input"
@@ -55,6 +55,7 @@ export default function LoginPage() {
             onChange={e => setEmail(e.target.value)}
             autoComplete="email"
             required
+            minLength={5}
             disabled={loading}
           />
 
@@ -67,6 +68,7 @@ export default function LoginPage() {
             onChange={e => setPassword(e.target.value)}
             autoComplete="current-password"
             required
+            minLength={8}
             disabled={loading}
           />
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
             type="submit"
             className="aq-btn-primary"
             style={{ width: "100%", marginTop: "1.25rem" }}
-            disabled={loading}
+            disabled={loading || !email.trim() || !password.trim()}
           >
             {loading ? (
               <><span className="aq-spinner-sm"></span> Verificando...</>
