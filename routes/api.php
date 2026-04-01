@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Api\Admin\DeviceController;
+use App\Http\Controllers\Api\Admin\DeviceTokenController;
+use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\DeviceIngestController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
@@ -24,10 +27,22 @@ Route::middleware('web')->group(function () {
     });
 
     Route::middleware(['auth', 'role:admin'])->group(function () {
-        // Route::apiResource('users', AdminUserController::class);
+        Route::get('/admin/users', [UserController::class, 'index']);
+        Route::post('/admin/users', [UserController::class, 'store']);
+        Route::get('/admin/users/{user}', [UserController::class, 'show']);
+        Route::patch('/admin/users/{user}', [UserController::class, 'update']);
+
+        Route::get('/admin/devices', [DeviceController::class, 'index']);
+        Route::post('/admin/devices', [DeviceController::class, 'store']);
+        Route::get('/admin/devices/{device}', [DeviceController::class, 'show']);
+        Route::patch('/admin/devices/{device}', [DeviceController::class, 'update']);
+
+        Route::get('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'index']);
+        Route::post('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'store']);
+        Route::patch('/admin/device-tokens/{deviceToken}/revoke', [DeviceTokenController::class, 'revoke']);
     });
 });
 
-    Route::post('/devices/ingest', [DeviceIngestController::class, 'store'])
-        ->middleware('throttle:120,1')
-        ->name('api.devices.ingest');
+Route::post('/devices/ingest', [DeviceIngestController::class, 'store'])
+    ->middleware('throttle:120,1')
+    ->name('api.devices.ingest');
