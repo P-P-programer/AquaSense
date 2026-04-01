@@ -10,15 +10,20 @@ import api from "../services/api";
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
-  const [loading, setLoading] = useState(true); // true mientras verifica sesión inicial
-  const [error, setError]     = useState(null);
+function normalizeUser(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (!payload.id) return null;
+  return payload;
+}
 
-  // Verificar sesión existente al cargar la app
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   useEffect(() => {
     api.me()
-      .then(setUser)
+      .then((data) => setUser(normalizeUser(data)))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
@@ -28,8 +33,9 @@ export function AuthProvider({ children }) {
     try {
       await api.login(email, password);
       const userData = await api.me();
-      setUser(userData);
-      return userData;
+      const safeUser = normalizeUser(userData);
+      setUser(safeUser);
+      return safeUser;
     } catch (err) {
       setError(err.message);
       throw err;
@@ -40,13 +46,13 @@ export function AuthProvider({ children }) {
     try {
       await api.logout();
     } catch (_) {
-      // Si falla el logout en el servidor, limpiamos igual el estado local
+      //
     }
     setUser(null);
   }
 
   const isAdmin = () => user?.role === "admin";
-  const isUser  = () => user?.role === "user";
+  const isUser = () => user?.role === "user";
 
   return (
     <AuthContext.Provider value={{ user, loading, error, login, logout, isAdmin, isUser }}>
