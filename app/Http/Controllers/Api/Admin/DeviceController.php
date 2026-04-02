@@ -17,7 +17,16 @@ class DeviceController extends Controller
             ->with([
                 'user:id,name,email',
                 'tokens:id,device_id,token_prefix,label,revoked_at,last_used_at,expires_at',
-                'latestLocation:id,device_id,captured_at,inside_expected_zone,distance_to_expected_m,city,country,address',
+                'latestLocation' => fn ($query) => $query->select([
+                    'device_locations.id',
+                    'device_locations.device_id',
+                    'device_locations.captured_at',
+                    'device_locations.inside_expected_zone',
+                    'device_locations.distance_to_expected_m',
+                    'device_locations.city',
+                    'device_locations.country',
+                    'device_locations.address',
+                ]),
             ])
             ->orderByDesc('last_seen_at')
             ->orderBy('name')
