@@ -622,6 +622,39 @@ body {
   gap: 0.75rem;
 }
 
+.aq-zone-tools {
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.aq-zone-inline {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.aq-zone-search {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.aq-zone-search .aq-input {
+  margin-bottom: 0;
+}
+
+.aq-zone-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+}
+
 .aq-token-item {
   border: 1px solid var(--borde);
   border-radius: 12px;
