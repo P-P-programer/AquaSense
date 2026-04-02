@@ -24,7 +24,18 @@ const iconOffline = L.icon({
   popupAnchor: [0, -32],
 });
 
+const iconInactive = L.icon({
+  iconUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDMyIDMyIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNCIgZmlsbD0iIzZhNzI4MCIvPjwvc3ZnPg==",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
+
 function getIcon(device) {
+  if (device.is_active === false) {
+    return iconInactive;
+  }
+
   if (!device.last_latitude || !device.last_longitude) {
     return iconOffline;
   }
@@ -99,6 +110,7 @@ export default function MapComponent({
             ${device.latest_location?.city ? `Ciudad: ${device.latest_location.city}<br/>` : ""}
             ${device.latest_location?.country ? `País: ${device.latest_location.country}<br/>` : ""}
             ${device.latest_location?.distance_to_expected_m != null ? `Dist. objetivo: ${device.latest_location.distance_to_expected_m}m<br/>` : ""}
+            Estado dispositivo: ${device.is_active ? "Activo" : "Inactivo"}<br/>
             Dueño: ${device.user?.name ?? "Sin asignar"}
           </div>
         `);
@@ -227,6 +239,9 @@ export default function MapComponent({
         </div>
         <div className="aq-legend-item">
           <span className="aq-legend-dot offline"></span> Offline
+        </div>
+        <div className="aq-legend-item">
+          <span className="aq-legend-dot inactive"></span> Dispositivo inactivo
         </div>
         {zonePickerEnabled && (
           <div className="aq-legend-item">

@@ -23,6 +23,10 @@ function StatusChip({ online, labelOnline = "online", labelOffline = "offline" }
   return <span className={`aq-state-chip ${online ? "online" : "offline"}`}>{online ? labelOnline : labelOffline}</span>;
 }
 
+function StatusChipNeutral({ active }) {
+  return <span className={`aq-state-chip ${active ? "neutral-on" : "neutral-off"}`}>{active ? "activo" : "inactivo"}</span>;
+}
+
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -309,6 +313,8 @@ export default function AdminPanel() {
   }
 
   const onlineCount = devices.filter((device) => isOnline(device.last_seen_at)).length;
+  const activeDevicesCount = devices.filter((device) => Boolean(device.is_active)).length;
+  const inactiveDevicesCount = devices.length - activeDevicesCount;
 
   return (
     <section className="aq-admin-shell">
@@ -417,7 +423,10 @@ export default function AdminPanel() {
                     </td>
                     <td>{user.role}</td>
                     <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
-                    <td>{user.devices_count ?? 0}</td>
+                    <td>
+                      <strong>{user.devices_count ?? 0}</strong>
+                      <div className="aq-table-meta">activos: {user.devices_active_count ?? 0} · inactivos: {user.devices_inactive_count ?? 0}</div>
+                    </td>
                     <td>
                       <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
                     </td>
@@ -430,6 +439,9 @@ export default function AdminPanel() {
 
         <div className="aq-admin-card">
           <div className="aq-panel-title"><i className="bi bi-cpu"></i> Dispositivos</div>
+          <div className="aq-table-meta" style={{ marginBottom: "0.7rem" }}>
+            Total: {devices.length} · Activos: {activeDevicesCount} · Inactivos: {inactiveDevicesCount}
+          </div>
           <form onSubmit={submitDevice} className="aq-admin-form">
             <div className="aq-admin-form-grid">
               <div>
@@ -529,7 +541,8 @@ export default function AdminPanel() {
                   <th>Propietario</th>
                   <th>Última señal</th>
                   <th>Última posición</th>
-                  <th>Estado</th>
+                  <th>Conectividad</th>
+                  <th>Asignación</th>
                   <th></th>
                 </tr>
               </thead>
@@ -546,7 +559,8 @@ export default function AdminPanel() {
                       <td>{device.user?.name ?? "Sin asignar"}</td>
                       <td>{formatDate(device.last_seen_at)}</td>
                       <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
-                      <td><StatusChip online={online} /></td>
+                      <td><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>
+                      <td><StatusChipNeutral active={Boolean(device.is_active)} /></td>
                       <td>
                         <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
                         <button type="button" className="aq-link-button" onClick={() => setSelectedDeviceId(device.id)}>
@@ -572,7 +586,8 @@ export default function AdminPanel() {
             {selectedDevice && (
               <div className="aq-table-meta">
                 Última ubicación: {formatCoords(selectedDevice.last_latitude, selectedDevice.last_longitude)} ·
-                Distancia objetivo: {selectedDevice.last_location_meta?.distance_to_expected_m ?? selectedDevice.distance_to_expected_m ?? "—"} m
+                Distancia objetivo: {selectedDevice.latest_location?.distance_to_expected_m ?? "—"} m ·
+                Estado: {selectedDevice.is_active ? "dispositivo activo" : "dispositivo inactivo"}
               </div>
             )}
           </div>
