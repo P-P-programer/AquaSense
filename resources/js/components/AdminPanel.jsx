@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
+import MapComponent from "./MapComponent";
+import { useDeviceLocations } from "../hooks/useDeviceLocations";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -32,6 +34,9 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Polling de ubicaciones en tiempo real
+  const locationsPolling = useDeviceLocations(devices, api, 15000);
 
   const [userForm, setUserForm] = useState({
     id: null,
@@ -287,6 +292,16 @@ export default function AdminPanel() {
 
       {error && <div className="aq-alert-error"><i className="bi bi-exclamation-triangle"></i> {error}</div>}
       {loading && <div className="aq-loading"><div className="aq-spinner"></div> Cargando panel admin...</div>}
+
+      {devices.length > 0 && (
+        <div className="aq-admin-card aq-admin-card-wide">
+          <div className="aq-panel-title"><i className="bi bi-geo-alt-fill"></i> Mapa de dispositivos en tiempo real</div>
+          <p className="aq-section-sub" style={{ marginTop: "0.5rem", marginBottom: "1rem" }}>
+            Ubicación actual de todos los ESP32 · Actualiza automáticamente cada 15 segundos
+          </p>
+          <MapComponent devices={devices} onDeviceSelect={setSelectedDeviceId} selectedDeviceId={selectedDeviceId} />
+        </div>
+      )}
 
       <div className="aq-admin-grid">
         <div className="aq-admin-card">

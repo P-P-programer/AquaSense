@@ -629,6 +629,88 @@ body {
   background: #f8fbff;
 }
 
+/* ── Mapa Leaflet ────────────────────────────── */
+.aq-map-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--sombra);
+}
+
+.aq-map {
+  border-radius: 12px;
+  background: var(--azul-claro);
+}
+
+/* Personalizar popups de Leaflet */
+.leaflet-popup-content {
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: var(--texto-primario);
+  line-height: 1.4;
+  font-size: 0.85rem;
+}
+
+.leaflet-popup-content strong {
+  color: var(--azul-profundo);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.leaflet-popup-content small {
+  color: var(--texto-secundario);
+}
+
+.leaflet-popup-tip {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--texto-secundario);
+}
+
+/* Leyenda del mapa */
+.aq-map-legend {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 400;
+  font-size: 0.78rem;
+}
+
+.aq-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.aq-legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.aq-legend-dot.online {
+  background: #10b981;
+}
+
+.aq-legend-dot.warning {
+  background: #f59e0b;
+}
+
+.aq-legend-dot.offline {
+  background: #ef4444;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Responsive ──────────────────────────── */
