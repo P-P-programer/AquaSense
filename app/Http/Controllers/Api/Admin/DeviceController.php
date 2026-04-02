@@ -14,7 +14,11 @@ class DeviceController extends Controller
     public function index(): JsonResponse
     {
         $devices = Device::query()
-            ->with(['user:id,name,email', 'tokens:id,device_id,token_prefix,label,revoked_at,last_used_at,expires_at'])
+            ->with([
+                'user:id,name,email',
+                'tokens:id,device_id,token_prefix,label,revoked_at,last_used_at,expires_at',
+                'latestLocation:id,device_id,captured_at,inside_expected_zone,distance_to_expected_m,city,country,address',
+            ])
             ->orderByDesc('last_seen_at')
             ->orderBy('name')
             ->get();
@@ -36,7 +40,7 @@ class DeviceController extends Controller
 
     public function show(Device $device): JsonResponse
     {
-        $device->load(['user:id,name,email', 'tokens']);
+        $device->load(['user:id,name,email', 'tokens', 'latestLocation']);
 
         return response()->json($device);
     }

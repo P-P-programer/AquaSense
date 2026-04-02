@@ -14,7 +14,11 @@ class UserController extends Controller
     public function index(): JsonResponse
     {
         $users = User::query()
-            ->withCount('devices')
+            ->withCount([
+                'devices',
+                'devices as devices_active_count' => fn ($q) => $q->where('is_active', true),
+                'devices as devices_inactive_count' => fn ($q) => $q->where('is_active', false),
+            ])
             ->orderBy('name')
             ->get();
 
@@ -23,7 +27,11 @@ class UserController extends Controller
 
     public function show(User $user): JsonResponse
     {
-        $user->loadCount('devices');
+        $user->loadCount([
+            'devices',
+            'devices as devices_active_count' => fn ($q) => $q->where('is_active', true),
+            'devices as devices_inactive_count' => fn ($q) => $q->where('is_active', false),
+        ]);
 
         return response()->json($user);
     }
