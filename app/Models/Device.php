@@ -14,6 +14,14 @@ class Device extends Model
         'identifier',
         'is_active',
         'last_seen_at',
+        'expected_latitude',
+        'expected_longitude',
+        'expected_radius_m',
+        'last_latitude',
+        'last_longitude',
+        'last_accuracy_m',
+        'last_location_at',
+        'last_location_meta',
         'metadata',
     ];
 
@@ -22,6 +30,14 @@ class Device extends Model
         return [
             'is_active' => 'boolean',
             'last_seen_at' => 'datetime',
+            'last_location_at' => 'datetime',
+            'expected_latitude' => 'float',
+            'expected_longitude' => 'float',
+            'last_latitude' => 'float',
+            'last_longitude' => 'float',
+            'expected_radius_m' => 'integer',
+            'last_accuracy_m' => 'integer',
+            'last_location_meta' => 'array',
             'metadata' => 'array',
         ];
     }
@@ -39,5 +55,10 @@ class Device extends Model
     public function registros(): HasMany
     {
         return $this->hasMany(Registro::class);
+    }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(DeviceLocation::class);
     }
 }

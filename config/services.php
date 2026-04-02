@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'geocoding' => [
+        'enabled' => env('GEOCODING_ENABLED', false),
+        'provider' => env('GEOCODING_PROVIDER', 'none'), // none|nominatim|geoapify
+        'timeout_seconds' => env('GEOCODING_TIMEOUT_SECONDS', 2),
+        'geoapify_api_key' => env('GEOAPIFY_API_KEY'),
+    ],
+
 ];
