@@ -36,6 +36,7 @@ Route::middleware('web')->group(function () {
         Route::post('/admin/devices', [DeviceController::class, 'store']);
         Route::get('/admin/devices/{device}', [DeviceController::class, 'show']);
         Route::patch('/admin/devices/{device}', [DeviceController::class, 'update']);
+        Route::get('/admin/devices/{device}/locations', [DeviceController::class, 'locations']);
 
         Route::get('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'index']);
         Route::post('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'store']);

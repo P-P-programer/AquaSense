@@ -89,6 +89,7 @@ const api = {
   getAdminDevices: () => api.get("/admin/devices"),
   createAdminDevice: (payload) => api.post("/admin/devices", payload),
   updateAdminDevice: (deviceId, payload) => api.patch(`/admin/devices/${deviceId}`, payload),
+  getAdminDeviceLocations: (deviceId, limit = 100) => api.get(`/admin/devices/${deviceId}/locations?limit=${limit}`),
 
   getAdminDeviceTokens: (deviceId) => api.get(`/admin/devices/${deviceId}/tokens`),
   createAdminDeviceToken: (deviceId, payload) => api.post(`/admin/devices/${deviceId}/tokens`, payload),

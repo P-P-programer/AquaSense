@@ -13,6 +13,11 @@ function isOnline(lastSeenAt) {
   return diffMs <= 60000;
 }
 
+function formatCoords(lat, lng) {
+  if (lat == null || lng == null) return "—";
+  return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+}
+
 function StatusChip({ online, labelOnline = "online", labelOffline = "offline" }) {
   return <span className={`aq-state-chip ${online ? "online" : "offline"}`}>{online ? labelOnline : labelOffline}</span>;
 }
@@ -21,6 +26,7 @@ export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
   const [tokens, setTokens] = useState([]);
+  const [deviceLocations, setDeviceLocations] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [generatedToken, setGeneratedToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +48,9 @@ export default function AdminPanel() {
     name: "",
     identifier: "",
     is_active: true,
+    expected_latitude: "",
+    expected_longitude: "",
+    expected_radius_m: 100,
   });
 
   const selectedDevice = useMemo(
@@ -63,8 +72,12 @@ export default function AdminPanel() {
       setDevices(devicesData);
 
       if (selectedDeviceId) {
-        const tokensData = await api.getAdminDeviceTokens(selectedDeviceId);
+        const [tokensData, locationsData] = await Promise.all([
+          api.getAdminDeviceTokens(selectedDeviceId),
+          api.getAdminDeviceLocations(selectedDeviceId, 50),
+        ]);
         setTokens(tokensData);
+        setDeviceLocations(locationsData);
       }
     } catch (err) {
       setError(err.message ?? "No se pudieron cargar los datos del admin.");
@@ -80,11 +93,18 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!selectedDeviceId) {
       setTokens([]);
+      setDeviceLocations([]);
       return;
     }
 
-    api.getAdminDeviceTokens(selectedDeviceId)
-      .then(setTokens)
+    Promise.all([
+      api.getAdminDeviceTokens(selectedDeviceId),
+      api.getAdminDeviceLocations(selectedDeviceId, 50),
+    ])
+      .then(([tokensData, locationsData]) => {
+        setTokens(tokensData);
+        setDeviceLocations(locationsData);
+      })
       .catch((err) => setError(err.message ?? "No se pudieron cargar los tokens."));
   }, [selectedDeviceId]);
 
@@ -106,6 +126,9 @@ export default function AdminPanel() {
       name: "",
       identifier: "",
       is_active: true,
+      expected_latitude: "",
+      expected_longitude: "",
+      expected_radius_m: 100,
     });
   }
 
@@ -127,6 +150,9 @@ export default function AdminPanel() {
       name: device.name ?? "",
       identifier: device.identifier ?? "",
       is_active: Boolean(device.is_active),
+      expected_latitude: device.expected_latitude ?? "",
+      expected_longitude: device.expected_longitude ?? "",
+      expected_radius_m: device.expected_radius_m ?? 100,
     });
     setSelectedDeviceId(device.id);
   }
@@ -174,6 +200,9 @@ export default function AdminPanel() {
         name: deviceForm.name,
         identifier: deviceForm.identifier || undefined,
         is_active: deviceForm.is_active,
+        expected_latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
+        expected_longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
+        expected_radius_m: deviceForm.expected_radius_m ? Number(deviceForm.expected_radius_m) : 100,
       };
 
       if (deviceForm.id) {
@@ -355,6 +384,18 @@ export default function AdminPanel() {
                   <span>Dispositivo activo</span>
                 </div>
               </div>
+              <div>
+                <label className="aq-input-label">Latitud esperada</label>
+                <input className="aq-input" type="number" step="0.0000001" value={deviceForm.expected_latitude} onChange={(e) => setDeviceForm((cur) => ({ ...cur, expected_latitude: e.target.value }))} placeholder="Ej. 4.7110000" />
+              </div>
+              <div>
+                <label className="aq-input-label">Longitud esperada</label>
+                <input className="aq-input" type="number" step="0.0000001" value={deviceForm.expected_longitude} onChange={(e) => setDeviceForm((cur) => ({ ...cur, expected_longitude: e.target.value }))} placeholder="Ej. -74.0721000" />
+              </div>
+              <div>
+                <label className="aq-input-label">Radio permitido (m)</label>
+                <input className="aq-input" type="number" min="10" max="100000" value={deviceForm.expected_radius_m} onChange={(e) => setDeviceForm((cur) => ({ ...cur, expected_radius_m: e.target.value }))} />
+              </div>
             </div>
 
             <div className="aq-admin-actions">
@@ -370,6 +411,7 @@ export default function AdminPanel() {
                   <th>Dispositivo</th>
                   <th>Propietario</th>
                   <th>Última señal</th>
+                  <th>Última posición</th>
                   <th>Estado</th>
                   <th></th>
                 </tr>
@@ -386,6 +428,7 @@ export default function AdminPanel() {
                       </td>
                       <td>{device.user?.name ?? "Sin asignar"}</td>
                       <td>{formatDate(device.last_seen_at)}</td>
+                      <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
                       <td><StatusChip online={online} /></td>
                       <td>
                         <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
@@ -409,6 +452,12 @@ export default function AdminPanel() {
             <div className="aq-table-meta">
               {selectedDevice ? `${selectedDevice.name} · ${selectedDevice.identifier}` : "Selecciona un dispositivo para ver o generar tokens."}
             </div>
+            {selectedDevice && (
+              <div className="aq-table-meta">
+                Última ubicación: {formatCoords(selectedDevice.last_latitude, selectedDevice.last_longitude)} ·
+                Distancia objetivo: {selectedDevice.last_location_meta?.distance_to_expected_m ?? selectedDevice.distance_to_expected_m ?? "—"} m
+              </div>
+            )}
           </div>
           <StatusChip online={Boolean(selectedDevice && isOnline(selectedDevice.last_seen_at))} labelOnline="activo" labelOffline="sin señal" />
         </div>
@@ -446,6 +495,26 @@ export default function AdminPanel() {
             </div>
           ))}
         </div>
+
+        {selectedDevice && (
+          <div className="aq-admin-token-list">
+            <div className="aq-panel-title"><i className="bi bi-geo-alt"></i> Historial reciente de ubicación</div>
+            {deviceLocations.slice(0, 6).map((loc) => (
+              <div className="aq-token-item" key={loc.id}>
+                <div>
+                  <strong>{formatCoords(loc.latitude, loc.longitude)}</strong>
+                  <div className="aq-table-meta">Captura: {formatDate(loc.captured_at)} · Precisión: {loc.accuracy_m ?? "—"} m</div>
+                  <div className="aq-table-meta">Ciudad: {loc.city ?? "—"} · País: {loc.country ?? "—"}</div>
+                </div>
+                <StatusChip
+                  online={loc.inside_expected_zone !== false}
+                  labelOnline={loc.inside_expected_zone == null ? "sin zona" : "en zona"}
+                  labelOffline="fuera de zona"
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

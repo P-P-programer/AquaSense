@@ -22,6 +22,18 @@ class DeviceController extends Controller
         return response()->json($devices);
     }
 
+    public function locations(Device $device, Request $request): JsonResponse
+    {
+        $limit = min(500, max(10, (int) $request->integer('limit', 100)));
+
+        $locations = $device->locations()
+            ->orderByDesc('captured_at')
+            ->limit($limit)
+            ->get();
+
+        return response()->json($locations);
+    }
+
     public function show(Device $device): JsonResponse
     {
         $device->load(['user:id,name,email', 'tokens']);
@@ -36,6 +48,9 @@ class DeviceController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'identifier' => ['nullable', 'string', 'max:255', 'unique:devices,identifier'],
             'is_active' => ['nullable', 'boolean'],
+            'expected_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'expected_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'expected_radius_m' => ['nullable', 'integer', 'min:10', 'max:100000'],
             'metadata' => ['nullable', 'array'],
         ]);
 
@@ -44,6 +59,9 @@ class DeviceController extends Controller
             'name' => $data['name'],
             'identifier' => $data['identifier'] ?? Str::uuid()->toString(),
             'is_active' => $data['is_active'] ?? true,
+            'expected_latitude' => $data['expected_latitude'] ?? null,
+            'expected_longitude' => $data['expected_longitude'] ?? null,
+            'expected_radius_m' => $data['expected_radius_m'] ?? 100,
             'metadata' => $data['metadata'] ?? null,
         ]);
 
@@ -57,6 +75,9 @@ class DeviceController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'identifier' => ['sometimes', 'string', 'max:255', Rule::unique('devices', 'identifier')->ignore($device->id)],
             'is_active' => ['sometimes', 'boolean'],
+            'expected_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'expected_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'expected_radius_m' => ['nullable', 'integer', 'min:10', 'max:100000'],
             'metadata' => ['nullable', 'array'],
         ]);
 
