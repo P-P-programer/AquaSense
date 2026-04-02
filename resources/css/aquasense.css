@@ -590,6 +590,16 @@ body {
   color: #991b1b;
 }
 
+.aq-state-chip.neutral-on {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.aq-state-chip.neutral-off {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 .aq-token-box {
   border: 1px dashed var(--azul-agua);
   border-radius: 12px;
@@ -620,6 +630,39 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.aq-zone-tools {
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.aq-zone-inline {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.aq-zone-search {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.aq-zone-search .aq-input {
+  margin-bottom: 0;
+}
+
+.aq-zone-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
 }
 
 .aq-token-item {
@@ -709,6 +752,10 @@ body {
 
 .aq-legend-dot.offline {
   background: #ef4444;
+}
+
+.aq-legend-dot.inactive {
+  background: #6a7280;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -5,6 +5,7 @@
  */
 
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 
 let csrfReady = false;
 
@@ -94,6 +95,32 @@ const api = {
   getAdminDeviceTokens: (deviceId) => api.get(`/admin/devices/${deviceId}/tokens`),
   createAdminDeviceToken: (deviceId, payload) => api.post(`/admin/devices/${deviceId}/tokens`, payload),
   revokeAdminDeviceToken: (deviceTokenId) => api.patch(`/admin/device-tokens/${deviceTokenId}/revoke`),
+
+  geocodeSearch: async (query) => {
+    const q = String(query ?? "").trim();
+    if (!q) return [];
+
+    const res = await fetch(`${NOMINATIM_BASE}/search?format=jsonv2&limit=5&q=${encodeURIComponent(q)}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`No se pudo buscar ubicación (${res.status})`);
+    }
+
+    const data = await res.json();
+
+    return Array.isArray(data)
+      ? data.map((item) => ({
+          name: item.display_name,
+          latitude: Number(item.lat),
+          longitude: Number(item.lon),
+        }))
+      : [];
+  },
 };
 
 export default api;

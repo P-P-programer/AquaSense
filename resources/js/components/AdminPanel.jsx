@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import MapComponent from "./MapComponent";
-import { useDeviceLocations } from "../hooks/useDeviceLocations";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -24,6 +23,10 @@ function StatusChip({ online, labelOnline = "online", labelOffline = "offline" }
   return <span className={`aq-state-chip ${online ? "online" : "offline"}`}>{online ? labelOnline : labelOffline}</span>;
 }
 
+function StatusChipNeutral({ active }) {
+  return <span className={`aq-state-chip ${active ? "neutral-on" : "neutral-off"}`}>{active ? "activo" : "inactivo"}</span>;
+}
+
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -31,12 +34,14 @@ export default function AdminPanel() {
   const [deviceLocations, setDeviceLocations] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [generatedToken, setGeneratedToken] = useState(null);
+  const [zonePickerEnabled, setZonePickerEnabled] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeResults, setPlaceResults] = useState([]);
+  const [searchingPlace, setSearchingPlace] = useState(false);
+  const [mapFocusTarget, setMapFocusTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
-  // Polling de ubicaciones en tiempo real
-  const locationsPolling = useDeviceLocations(devices, api, 15000);
 
   const [userForm, setUserForm] = useState({
     id: null,
@@ -135,6 +140,9 @@ export default function AdminPanel() {
       expected_longitude: "",
       expected_radius_m: 100,
     });
+    setZonePickerEnabled(false);
+    setPlaceQuery("");
+    setPlaceResults([]);
   }
 
   function editUser(user) {
@@ -160,6 +168,47 @@ export default function AdminPanel() {
       expected_radius_m: device.expected_radius_m ?? 100,
     });
     setSelectedDeviceId(device.id);
+    setMapFocusTarget(
+      device.last_latitude != null && device.last_longitude != null
+        ? { latitude: Number(device.last_latitude), longitude: Number(device.last_longitude), zoom: 16, tick: Date.now() }
+        : null,
+    );
+  }
+
+  function pickZoneCenter({ latitude, longitude }) {
+    setDeviceForm((cur) => ({
+      ...cur,
+      expected_latitude: Number(latitude).toFixed(7),
+      expected_longitude: Number(longitude).toFixed(7),
+    }));
+  }
+
+  async function searchPlaces(e) {
+    e.preventDefault();
+    const query = placeQuery.trim();
+    if (!query) return;
+
+    setSearchingPlace(true);
+    setError(null);
+
+    try {
+      const results = await api.geocodeSearch(query);
+      setPlaceResults(results);
+    } catch (err) {
+      setError(err.message ?? "No se pudo buscar la ubicación.");
+    } finally {
+      setSearchingPlace(false);
+    }
+  }
+
+  function selectPlace(place) {
+    pickZoneCenter({ latitude: place.latitude, longitude: place.longitude });
+    setMapFocusTarget({
+      latitude: place.latitude,
+      longitude: place.longitude,
+      zoom: 16,
+      tick: Date.now(),
+    });
   }
 
   async function submitUser(e) {
@@ -264,6 +313,8 @@ export default function AdminPanel() {
   }
 
   const onlineCount = devices.filter((device) => isOnline(device.last_seen_at)).length;
+  const activeDevicesCount = devices.filter((device) => Boolean(device.is_active)).length;
+  const inactiveDevicesCount = devices.length - activeDevicesCount;
 
   return (
     <section className="aq-admin-shell">
@@ -299,7 +350,19 @@ export default function AdminPanel() {
           <p className="aq-section-sub" style={{ marginTop: "0.5rem", marginBottom: "1rem" }}>
             Ubicación actual de todos los ESP32 · Actualiza automáticamente cada 15 segundos
           </p>
-          <MapComponent devices={devices} onDeviceSelect={setSelectedDeviceId} selectedDeviceId={selectedDeviceId} />
+          <MapComponent
+            devices={devices}
+            onDeviceSelect={setSelectedDeviceId}
+            selectedDeviceId={selectedDeviceId}
+            zoneDraft={{
+              latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
+              longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
+              radius: Number(deviceForm.expected_radius_m || 100),
+            }}
+            onPickZoneCenter={pickZoneCenter}
+            mapFocusTarget={mapFocusTarget}
+            zonePickerEnabled={zonePickerEnabled}
+          />
         </div>
       )}
 
@@ -360,7 +423,10 @@ export default function AdminPanel() {
                     </td>
                     <td>{user.role}</td>
                     <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
-                    <td>{user.devices_count ?? 0}</td>
+                    <td>
+                      <strong>{user.devices_count ?? 0}</strong>
+                      <div className="aq-table-meta">activos: {user.devices_active_count ?? 0} · inactivos: {user.devices_inactive_count ?? 0}</div>
+                    </td>
                     <td>
                       <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
                     </td>
@@ -373,6 +439,9 @@ export default function AdminPanel() {
 
         <div className="aq-admin-card">
           <div className="aq-panel-title"><i className="bi bi-cpu"></i> Dispositivos</div>
+          <div className="aq-table-meta" style={{ marginBottom: "0.7rem" }}>
+            Total: {devices.length} · Activos: {activeDevicesCount} · Inactivos: {inactiveDevicesCount}
+          </div>
           <form onSubmit={submitDevice} className="aq-admin-form">
             <div className="aq-admin-form-grid">
               <div>
@@ -413,6 +482,51 @@ export default function AdminPanel() {
               </div>
             </div>
 
+            <div className="aq-zone-tools">
+              <div className="aq-input-label" style={{ marginBottom: 6 }}>Zona esperada interactiva</div>
+              <div className="aq-zone-inline">
+                <button
+                  type="button"
+                  className="aq-btn-secondary"
+                  onClick={() => setZonePickerEnabled((cur) => !cur)}
+                >
+                  {zonePickerEnabled ? "Desactivar selección en mapa" : "Activar selección en mapa"}
+                </button>
+                <span className="aq-table-meta">
+                  {zonePickerEnabled
+                    ? "Haz click en el mapa para fijar latitud y longitud."
+                    : "Activa para seleccionar ubicación con click en el mapa."}
+                </span>
+              </div>
+
+              <form className="aq-zone-search" onSubmit={searchPlaces}>
+                <input
+                  className="aq-input"
+                  value={placeQuery}
+                  onChange={(e) => setPlaceQuery(e.target.value)}
+                  placeholder="Buscar ciudad o dirección (ej. Bogotá, Calle 100...)"
+                />
+                <button type="submit" className="aq-btn-secondary" disabled={searchingPlace}>
+                  {searchingPlace ? "Buscando..." : "Buscar"}
+                </button>
+              </form>
+
+              {placeResults.length > 0 && (
+                <div className="aq-zone-results">
+                  {placeResults.map((place, index) => (
+                    <button
+                      key={`${place.latitude}-${place.longitude}-${index}`}
+                      type="button"
+                      className="aq-link-button"
+                      onClick={() => selectPlace(place)}
+                    >
+                      {place.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="aq-admin-actions">
               <button type="submit" className="aq-btn-primary" disabled={saving}>{deviceForm.id ? "Actualizar dispositivo" : "Crear dispositivo"}</button>
               <button type="button" className="aq-btn-secondary" onClick={resetDeviceForm}>Limpiar</button>
@@ -427,7 +541,8 @@ export default function AdminPanel() {
                   <th>Propietario</th>
                   <th>Última señal</th>
                   <th>Última posición</th>
-                  <th>Estado</th>
+                  <th>Conectividad</th>
+                  <th>Asignación</th>
                   <th></th>
                 </tr>
               </thead>
@@ -444,7 +559,8 @@ export default function AdminPanel() {
                       <td>{device.user?.name ?? "Sin asignar"}</td>
                       <td>{formatDate(device.last_seen_at)}</td>
                       <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
-                      <td><StatusChip online={online} /></td>
+                      <td><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>
+                      <td><StatusChipNeutral active={Boolean(device.is_active)} /></td>
                       <td>
                         <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
                         <button type="button" className="aq-link-button" onClick={() => setSelectedDeviceId(device.id)}>
@@ -470,7 +586,8 @@ export default function AdminPanel() {
             {selectedDevice && (
               <div className="aq-table-meta">
                 Última ubicación: {formatCoords(selectedDevice.last_latitude, selectedDevice.last_longitude)} ·
-                Distancia objetivo: {selectedDevice.last_location_meta?.distance_to_expected_m ?? selectedDevice.distance_to_expected_m ?? "—"} m
+                Distancia objetivo: {selectedDevice.latest_location?.distance_to_expected_m ?? "—"} m ·
+                Estado: {selectedDevice.is_active ? "dispositivo activo" : "dispositivo inactivo"}
               </div>
             )}
           </div>
