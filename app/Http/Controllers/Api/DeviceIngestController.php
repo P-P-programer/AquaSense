@@ -7,6 +7,7 @@ use App\Models\Device;
 use App\Models\DeviceLocation;
 use App\Models\DeviceToken;
 use App\Models\Registro;
+use App\Services\AlertEvaluatorService;
 use App\Services\ReverseGeocodingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -18,9 +19,10 @@ use Illuminate\Validation\ValidationException;
 
 class DeviceIngestController extends Controller
 {
-    public function __construct(private readonly ReverseGeocodingService $reverseGeocodingService)
-    {
-    }
+    public function __construct(
+        private readonly ReverseGeocodingService $reverseGeocodingService,
+        private readonly AlertEvaluatorService $alertEvaluatorService,
+    ) {}
 
     public function store(Request $request): JsonResponse
     {
@@ -121,6 +123,12 @@ class DeviceIngestController extends Controller
 
             return $registro;
         });
+
+        $this->alertEvaluatorService->evaluate(
+            $deviceToken->device->fresh(),
+            $registro,
+            $locationPayload
+        );
 
         return response()->json([
             'message' => 'Lectura recibida correctamente.',

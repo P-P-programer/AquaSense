@@ -63,6 +63,11 @@ class Device extends Model
         return $this->hasMany(DeviceLocation::class);
     }
 
+    public function alerts(): HasMany
+    {
+        return $this->hasMany(Alert::class);
+    }
+
     public function latestLocation(): HasOne
     {
         return $this->hasOne(DeviceLocation::class)->latestOfMany('captured_at');

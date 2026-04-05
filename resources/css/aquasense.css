@@ -672,6 +672,54 @@ body {
   background: #f8fbff;
 }
 
+.aq-alerts-panel {
+  margin-bottom: 1.25rem;
+}
+
+.aq-alerts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.aq-alerts-filters .aq-input {
+  margin-bottom: 0;
+  min-width: 145px;
+}
+
+.aq-alert-item {
+  align-items: flex-start;
+}
+
+.aq-alert-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.aq-badge.aq-severity-critica {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.aq-badge.aq-severity-alta {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.aq-badge.aq-severity-media {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.aq-badge.aq-severity-leve {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
 /* ── Mapa Leaflet ────────────────────────────── */
 .aq-map-container {
   position: relative;
