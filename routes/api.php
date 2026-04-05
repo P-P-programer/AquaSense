@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Admin\DeviceController;
 use App\Http\Controllers\Api\Admin\DeviceTokenController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\DeviceIngestController;
+use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,8 @@ Route::middleware('web')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);
         Route::get('/registros', [RegistrosController::class, 'index']);
+        Route::get('/alerts', [AlertController::class, 'index']);
+        Route::patch('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
     });
 
     Route::middleware(['auth', 'role:admin'])->group(function () {

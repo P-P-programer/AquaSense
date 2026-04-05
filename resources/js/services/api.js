@@ -82,6 +82,20 @@ const api = {
   me: () => api.get("/me"),
   getStats: () => api.get("/stats"),
   getRegistros: () => api.get("/registros"),
+  getAlerts: (params = {}) => {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.set(key, String(value));
+      }
+    });
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return api.get(`/alerts${suffix}`);
+  },
+  resolveAlert: (alertId) => api.patch(`/alerts/${alertId}/resolve`),
 
   getAdminUsers: () => api.get("/admin/users"),
   createAdminUser: (payload) => api.post("/admin/users", payload),
