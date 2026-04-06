@@ -38,7 +38,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}
           source: "public/build/*"
-          target: "/home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/AquaSense/public/build-new/"
+          target: "/home/u633781435/domains/aquasense.sbs/AquaSense/public/build-new/"
           strip_components: 2
 
       - name: Atomic swap build folders
@@ -51,7 +51,7 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script: |
-            cd /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/AquaSense/public
+            cd /home/u633781435/domains/aquasense.sbs/AquaSense/public
             rm -rf build-old
             if [ -d build ]; then mv build build-old; fi
             mv build-new build
@@ -73,7 +73,7 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script: |
-            cd /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/AquaSense
+            cd /home/u633781435/domains/aquasense.sbs/AquaSense
             git pull origin main
             rm -f public/hot ../public_html/hot
             composer install --no-dev --classmap-authoritative
@@ -82,7 +82,7 @@ jobs:
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-            mkdir -p /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/public_html/build
-            rm -rf /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/public_html/build/*
-            cp -a /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/AquaSense/public/build/. /home/u633781435/domains/darkgreen-bison-231698.hostingersite.com/public_html/build/
+            mkdir -p /home/u633781435/domains/aquasense.sbs/public_html/build
+            rm -rf /home/u633781435/domains/aquasense.sbs/public_html/build/*
+            cp -a /home/u633781435/domains/aquasense.sbs/AquaSense/public/build/. /home/u633781435/domains/aquasense.sbs/public_html/build/
             echo "Deploy backend + sync frontend completado"
