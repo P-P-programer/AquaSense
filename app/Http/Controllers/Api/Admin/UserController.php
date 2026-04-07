@@ -44,6 +44,9 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', Rule::in(['admin', 'user'])],
             'is_active' => ['nullable', 'boolean'],
+            'alerts_notify_email' => ['nullable', 'boolean'],
+            'alerts_notify_push' => ['nullable', 'boolean'],
+            'alerts_min_severity' => ['nullable', Rule::in(['leve', 'media', 'alta', 'critica'])],
         ]);
 
         $user = User::create([
@@ -52,6 +55,9 @@ class UserController extends Controller
             'password' => Hash::make($data['password']),
             'role' => $data['role'],
             'is_active' => $data['is_active'] ?? true,
+            'alerts_notify_email' => $data['alerts_notify_email'] ?? true,
+            'alerts_notify_push' => $data['alerts_notify_push'] ?? true,
+            'alerts_min_severity' => $data['alerts_min_severity'] ?? 'media',
         ]);
 
         return response()->json($user, 201);
@@ -65,6 +71,9 @@ class UserController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
             'role' => ['sometimes', Rule::in(['admin', 'user'])],
             'is_active' => ['sometimes', 'boolean'],
+            'alerts_notify_email' => ['sometimes', 'boolean'],
+            'alerts_notify_push' => ['sometimes', 'boolean'],
+            'alerts_min_severity' => ['sometimes', Rule::in(['leve', 'media', 'alta', 'critica'])],
         ]);
 
         if (array_key_exists('password', $data) && $data['password'] === null) {

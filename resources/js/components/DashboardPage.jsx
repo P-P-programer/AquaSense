@@ -1,6 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import AdminPanel from "./AdminPanel";
 import AlertsPanel from "./AlertsPanel";
+import AlertPreferencesPanel from "./AlertPreferencesPanel";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
@@ -62,6 +63,8 @@ export default function DashboardPage() {
         </div>
 
         <StatsComponent />
+
+        <AlertPreferencesPanel />
 
         <AlertsPanel />
 
