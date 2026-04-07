@@ -18,6 +18,9 @@ class User extends Authenticatable
         'password',
         'role',
         'is_active',
+        'alerts_notify_email',
+        'alerts_notify_push',
+        'alerts_min_severity',
     ];
 
     protected $hidden = [
@@ -31,6 +34,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
+            'alerts_notify_email' => 'boolean',
+            'alerts_notify_push' => 'boolean',
         ];
     }
 

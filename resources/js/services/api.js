@@ -96,6 +96,8 @@ const api = {
     return api.get(`/alerts${suffix}`);
   },
   resolveAlert: (alertId) => api.patch(`/alerts/${alertId}/resolve`),
+  getMyAlertPreferences: () => api.get("/me/alert-preferences"),
+  updateMyAlertPreferences: (payload) => api.patch("/me/alert-preferences", payload),
 
   getAdminUsers: () => api.get("/admin/users"),
   createAdminUser: (payload) => api.post("/admin/users", payload),

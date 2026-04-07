@@ -5,9 +5,14 @@ namespace App\Services;
 use App\Models\Alert;
 use App\Models\Device;
 use App\Models\Registro;
+use Carbon\CarbonInterface;
 
 class AlertEvaluatorService
 {
+    public function __construct(private readonly AlertNotificationService $alertNotificationService)
+    {
+    }
+
     /**
      * @param  array<string, mixed>|null  $locationPayload
      */
@@ -15,6 +20,36 @@ class AlertEvaluatorService
     {
         $this->evaluatePhOutOfRange($device, $registro);
         $this->evaluateOutOfZone($device, $locationPayload);
+    }
+
+    public function evaluateOffline(Device $device, int $offlineAfterMinutes): void
+    {
+        if (! $device->is_active || ! $device->last_seen_at) {
+            return;
+        }
+
+        $isOffline = $device->last_seen_at->lt(now()->subMinutes($offlineAfterMinutes));
+
+        if (! $isOffline) {
+            $this->resolveAlert($device, 'offline');
+
+            return;
+        }
+
+        $minutesWithoutHeartbeat = now()->diffInMinutes($device->last_seen_at);
+
+        $this->createOrBumpActiveAlert(
+            $device,
+            'offline',
+            'critica',
+            'Dispositivo sin señal',
+            sprintf('El dispositivo %s no reporta heartbeat hace %d minutos.', $device->name, $minutesWithoutHeartbeat),
+            [
+                'last_seen_at' => optional($device->last_seen_at)->toISOString(),
+                'offline_after_minutes' => $offlineAfterMinutes,
+                'minutes_without_heartbeat' => $minutesWithoutHeartbeat,
+            ]
+        );
     }
 
     private function evaluatePhOutOfRange(Device $device, Registro $registro): void
@@ -93,7 +128,7 @@ class AlertEvaluatorService
     /**
      * @param  array<string, mixed>|null  $data
      */
-    private function createOrBumpActiveAlert(
+    public function createOrBumpActiveAlert(
         Device $device,
         string $type,
         string $severity,
@@ -119,10 +154,14 @@ class AlertEvaluatorService
                 'triggered_count' => $alert->triggered_count + 1,
             ])->save();
 
+            if ($this->shouldRenotify($alert, $now)) {
+                $this->alertNotificationService->notify($alert->fresh(['device']));
+            }
+
             return $alert;
         }
 
-        return Alert::create([
+        $newAlert = Alert::create([
             'device_id' => $device->id,
             'type' => $type,
             'severity' => $severity,
@@ -134,6 +173,10 @@ class AlertEvaluatorService
             'last_triggered_at' => $now,
             'triggered_count' => 1,
         ]);
+
+        $this->alertNotificationService->notify($newAlert->fresh(['device']));
+
+        return $newAlert;
     }
 
     private function resolveAlert(Device $device, string $type): void
@@ -146,5 +189,22 @@ class AlertEvaluatorService
                 'status' => 'resolved',
                 'resolved_at' => now(),
             ]);
+    }
+
+    private function shouldRenotify(Alert $alert, CarbonInterface $now): bool
+    {
+        $cooldownMinutes = max(1, (int) config('alerts.renotify_cooldown_minutes', 30));
+
+        $lastNotificationAt = $alert->notified_email_at;
+
+        if ($alert->notified_push_at && (! $lastNotificationAt || $alert->notified_push_at->gt($lastNotificationAt))) {
+            $lastNotificationAt = $alert->notified_push_at;
+        }
+
+        if (! $lastNotificationAt) {
+            return true;
+        }
+
+        return $lastNotificationAt->lte($now->copy()->subMinutes($cooldownMinutes));
     }
 }
