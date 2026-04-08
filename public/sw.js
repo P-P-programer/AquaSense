@@ -1,12 +1,17 @@
-// Versión del cache basada en timestamp (se actualiza en cada deploy)
-const CACHE_VERSION = 'aquasense-cache-' + new Date().toISOString().split('T')[0];
+const swUrl = new URL(self.location.href);
+const BUILD_VERSION = swUrl.searchParams.get('v') || 'dev';
+const CACHE_VERSION = `aquasense-cache-${BUILD_VERSION}`;
 const URLS_TO_CACHE = [
   '/',
-  '/index.php',
   '/manifest.json',
-  '/favicon.ico',
   '/icon-192.png'
 ];
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -24,8 +29,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Eliminar caches antiguos (no del día actual)
-          if (!cacheName.includes(new Date().toISOString().split('T')[0])) {
+          if (cacheName.startsWith('aquasense-cache-') && cacheName !== CACHE_VERSION) {
             console.log('[PWA] Eliminando caché antiguo:', cacheName);
             return caches.delete(cacheName);
           }
@@ -38,6 +42,11 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
   const url = new URL(request.url);
 
   // No cachear peticiones a API, sanctum, o rutas dinámicas
@@ -45,43 +54,45 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (request.method === 'GET') {
-    // Para archivos con hash (assets de Vite como .js?v=xxx, .css?v=xxx)
-    // Usar stale-while-revalidate: sirve del caché inmediatamente, actualiza en background
-    if (/\.(js|css)(\?.*)?$/.test(url.pathname) && url.search.includes('v=')) {
-      event.respondWith(
-        caches.open(CACHE_VERSION).then(cache => {
-          return cache.match(request).then(response => {
-            const fetchPromise = fetch(request).then(res => {
-              const resClone = res.clone();
-              if (res.status === 200) {
-                cache.put(request, resClone);
-              }
-              return res;
-            }).catch(() => response);
-            return response || fetchPromise;
-          });
-        })
-      );
-    }
-    // Para HTML y otros recursos dinámicos, usar network-first
-    // Intenta la red primero, cae al caché si falla
-    else {
-      event.respondWith(
-        fetch(request)
-          .then(res => {
-            const resClone = res.clone();
-            if (res.status === 200) {
-              caches.open(CACHE_VERSION).then(cache => {
-                cache.put(request, resClone);
-              });
+  const isStaticAsset = url.pathname.startsWith('/build/assets/')
+    || url.pathname === '/manifest.json'
+    || url.pathname.endsWith('.png')
+    || url.pathname.endsWith('.ico');
+
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.open(CACHE_VERSION).then(cache => {
+        return cache.match(request).then(cached => {
+          const networkFetch = fetch(request).then(response => {
+            if (response && response.status === 200) {
+              cache.put(request, response.clone());
             }
-            return res;
-          })
-          .catch(() => {
-            return caches.match(request) || caches.match('/');
-          })
-      );
-    }
+
+            return response;
+          }).catch(() => cached);
+
+          return cached || networkFetch;
+        });
+      })
+    );
+
+    return;
   }
+
+  // HTML y navegación: network-first para traer siempre versión nueva en deploy.
+  event.respondWith(
+    fetch(request)
+      .then(res => {
+        if (res.status === 200) {
+          caches.open(CACHE_VERSION).then(cache => {
+            cache.put(request, res.clone());
+          });
+        }
+
+        return res;
+      })
+      .catch(() => {
+        return caches.match(request) || caches.match('/');
+      })
+  );
 });

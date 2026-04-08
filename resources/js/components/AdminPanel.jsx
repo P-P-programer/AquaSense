@@ -358,27 +358,27 @@ export default function AdminPanel() {
       {success && <div className="aq-alert-success"><i className="bi bi-check-circle"></i> {success}</div>}
       {loading && <div className="aq-loading"><div className="aq-spinner"></div> Cargando panel admin...</div>}
 
-      {devices.length > 0 && (
-        <div className="aq-admin-card aq-admin-card-wide">
-          <div className="aq-panel-title"><i className="bi bi-geo-alt-fill"></i> Mapa de dispositivos en tiempo real</div>
-          <p className="aq-section-sub" style={{ marginTop: "0.5rem", marginBottom: "1rem" }}>
-            Ubicación actual de todos los ESP32 · Actualiza automáticamente cada 15 segundos
-          </p>
-          <MapComponent
-            devices={devices}
-            onDeviceSelect={setSelectedDeviceId}
-            selectedDeviceId={selectedDeviceId}
-            zoneDraft={{
-              latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
-              longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
-              radius: Number(deviceForm.expected_radius_m || 100),
-            }}
-            onPickZoneCenter={pickZoneCenter}
-            mapFocusTarget={mapFocusTarget}
-            zonePickerEnabled={zonePickerEnabled}
-          />
-        </div>
-      )}
+      <div className="aq-admin-card aq-admin-card-wide">
+        <div className="aq-panel-title"><i className="bi bi-geo-alt-fill"></i> Mapa de dispositivos en tiempo real</div>
+        <p className="aq-section-sub" style={{ marginTop: "0.5rem", marginBottom: "1rem" }}>
+          {devices.length > 0
+            ? "Ubicación actual de todos los ESP32 · Actualiza automáticamente cada 15 segundos"
+            : "Aún no hay dispositivos registrados. Puedes definir la zona esperada desde el mapa y luego crear el dispositivo."}
+        </p>
+        <MapComponent
+          devices={devices}
+          onDeviceSelect={setSelectedDeviceId}
+          selectedDeviceId={selectedDeviceId}
+          zoneDraft={{
+            latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
+            longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
+            radius: Number(deviceForm.expected_radius_m || 100),
+          }}
+          onPickZoneCenter={pickZoneCenter}
+          mapFocusTarget={mapFocusTarget}
+          zonePickerEnabled={zonePickerEnabled}
+        />
+      </div>
 
       <div className="aq-admin-grid">
         <div className="aq-admin-card">
