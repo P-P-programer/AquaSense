@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,23 +22,74 @@ export default function AlertsPanel() {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("active");
   const [savingId, setSavingId] = useState(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [pushPermission, setPushPermission] = useState(
+    typeof Notification === "undefined" ? "unsupported" : Notification.permission,
+  );
+  const notifiedAlertsRef = useRef(new Set());
 
-  async function loadAlerts() {
-    setLoading(true);
+  async function loadAlerts({ silent = false } = {}) {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
       const data = await api.getAlerts({ status: statusFilter, limit: 30 });
-      setAlerts(Array.isArray(data) ? data : []);
+      const nextAlerts = Array.isArray(data) ? data : [];
+      setAlerts(nextAlerts);
+      setLastUpdatedAt(new Date());
+      maybeNotifyBrowser(nextAlerts);
     } catch (err) {
       setError(err.message ?? "No se pudieron cargar las alertas.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
+  }
+
+  function maybeNotifyBrowser(nextAlerts) {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") {
+      return;
+    }
+
+    nextAlerts
+      .filter((alert) => alert.status === "active" && alert.severity === "critica")
+      .forEach((alert) => {
+        if (notifiedAlertsRef.current.has(alert.id)) {
+          return;
+        }
+
+        notifiedAlertsRef.current.add(alert.id);
+
+        new Notification(`AquaSense · ${alert.title}`, {
+          body: `${alert.message} (${alert.device?.name ?? "Dispositivo"})`,
+          tag: `alert-${alert.id}`,
+        });
+      });
+  }
+
+  async function enableBrowserPush() {
+    if (typeof Notification === "undefined") {
+      setPushPermission("unsupported");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
   }
 
   useEffect(() => {
     loadAlerts();
+  }, [statusFilter]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadAlerts({ silent: true });
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, [statusFilter]);
 
   async function resolveAlert(alertId) {
@@ -63,6 +114,9 @@ export default function AlertsPanel() {
           Alertas operativas
         </div>
         <div className="aq-alerts-filters">
+          <button type="button" className="aq-btn-secondary" onClick={() => loadAlerts()}>
+            Refrescar
+          </button>
           <select
             className="aq-input"
             value={statusFilter}
@@ -79,6 +133,19 @@ export default function AlertsPanel() {
           ? "Vista global: alertas de todos los dispositivos."
           : "Vista personal: alertas de tus dispositivos asignados."}
       </p>
+
+      <div className="aq-table-meta" style={{ marginBottom: "0.6rem" }}>
+        Última actualización: {lastUpdatedAt ? lastUpdatedAt.toLocaleTimeString() : "—"}
+      </div>
+
+      <div className="aq-table-meta" style={{ marginBottom: "0.9rem" }}>
+        Notificaciones del navegador: {pushPermission}
+        {pushPermission !== "granted" && pushPermission !== "unsupported" && (
+          <button type="button" className="aq-link-button" onClick={enableBrowserPush}>
+            Activar
+          </button>
+        )}
+      </div>
 
       {error && <div className="aq-alert-error"><i className="bi bi-exclamation-triangle"></i> {error}</div>}
 

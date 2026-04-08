@@ -4,6 +4,7 @@ import api from "../services/api";
 export default function ChartComponent() {
   const [data,  setData]  = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.getRegistros()
@@ -11,7 +12,8 @@ export default function ChartComponent() {
         // Toma los últimos 7 registros para la gráfica
         setData(registros.slice(-7));
       })
-      .catch(err => setError(err.message));
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   if (error) return (
@@ -20,10 +22,22 @@ export default function ChartComponent() {
     </div>
   );
 
-  if (!data.length) return (
+  if (loading) return (
     <div className="aq-loading">
       <div className="aq-spinner"></div>
       Cargando gráfica...
+    </div>
+  );
+
+  if (!data.length) return (
+    <div className="aq-panel">
+      <div className="aq-panel-title">
+        <i className="bi bi-bar-chart-fill"></i>
+        Consumo diario — últimos 7 días
+      </div>
+      <div className="aq-empty-state">
+        Aún no hay datos para construir la gráfica. El panel se actualizará cuando llegue la primera telemetría.
+      </div>
     </div>
   );
 

@@ -418,6 +418,27 @@ body {
   animation: spin 0.7s linear infinite;
 }
 
+.aq-empty-state {
+  border: 1px dashed var(--borde);
+  background: #f8fbff;
+  color: var(--texto-secundario);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+}
+
+.aq-alert-success {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #86efac;
+  background: #ecfdf5;
+  color: #166534;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.85rem;
+}
+
 /* ── Admin panel ────────────────────────── */
 .aq-admin-shell {
   display: flex;

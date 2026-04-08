@@ -25,7 +25,20 @@ export default function StatsComponent() {
   );
 
   return (
-    <div className="aq-stats-grid">
+    <>
+      {!stats.has_registros && (
+        <div className="aq-empty-state" style={{ marginBottom: "0.9rem" }}>
+          Aún no hay telemetría en producción. Conecta un dispositivo y espera la primera lectura.
+        </div>
+      )}
+
+      {stats.last_captured_at && (
+        <div className="aq-table-meta" style={{ marginBottom: "0.6rem" }}>
+          Última actualización de sensores: {new Date(stats.last_captured_at).toLocaleString()}
+        </div>
+      )}
+
+      <div className="aq-stats-grid">
 
       <div className="aq-stat-card">
         <span className="aq-stat-label"><i className="bi bi-droplet"></i> Consumo total</span>
@@ -93,6 +106,7 @@ export default function StatsComponent() {
         </span>
       </div>
 
-    </div>
+      </div>
+    </>
   );
 }
