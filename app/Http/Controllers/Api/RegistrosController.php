@@ -25,6 +25,9 @@ class RegistrosController extends Controller
                 'temperatura' => $registro->temperatura,
                 'estado' => $registro->estado ?? 'ok',
                 'source' => $registro->source,
+                'power_source' => $registro->power_source,
+                'backup_level' => $registro->backup_level,
+                'power_event_at' => optional($registro->power_event_at)->format('Y-m-d H:i:s'),
             ];
         });
 

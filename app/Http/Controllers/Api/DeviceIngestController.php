@@ -58,6 +58,9 @@ class DeviceIngestController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'accuracy_m' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'power_source' => ['nullable', 'in:mains,backup,unknown'],
+            'backup_level' => ['nullable', 'numeric', 'between:0,100'],
+            'power_event_at' => ['nullable', 'date'],
         ]);
 
         $ph = $validated['ph'] ?? null;
@@ -83,6 +86,9 @@ class DeviceIngestController extends Controller
                 'temperatura' => $validated['temperatura'] ?? null,
                 'estado' => $estado,
                 'source' => 'esp32',
+                'power_source' => $validated['power_source'] ?? null,
+                'backup_level' => $validated['backup_level'] ?? null,
+                'power_event_at' => isset($validated['power_event_at']) ? Carbon::parse($validated['power_event_at']) : null,
             ]);
 
             $deviceToken->forceFill([

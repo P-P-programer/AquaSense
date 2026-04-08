@@ -20,6 +20,7 @@ class AlertEvaluatorService
     {
         $this->evaluatePhOutOfRange($device, $registro);
         $this->evaluateOutOfZone($device, $locationPayload);
+        $this->evaluatePowerSource($device, $registro);
     }
 
     public function evaluateOffline(Device $device, int $offlineAfterMinutes): void
@@ -125,6 +126,85 @@ class AlertEvaluatorService
         );
     }
 
+    private function evaluatePowerSource(Device $device, Registro $registro): void
+    {
+        $currentSource = $registro->power_source;
+
+        if (! $currentSource) {
+            return;
+        }
+
+        $previous = Registro::query()
+            ->where('device_id', $device->id)
+            ->where('id', '<>', $registro->id)
+            ->orderByDesc('captured_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $previousSource = $previous?->power_source;
+        $hasChanged = $previousSource !== null && $previousSource !== $currentSource;
+
+        if ($currentSource === 'backup') {
+            $message = $hasChanged
+                ? sprintf('El dispositivo %s cambió a energía de respaldo.', $device->name)
+                : sprintf('El dispositivo %s sigue en energía de respaldo.', $device->name);
+
+            $this->createOrBumpActiveAlert(
+                $device,
+                'power_outage',
+                'critica',
+                'Corte de energía principal',
+                $message,
+                [
+                    'from' => $previousSource,
+                    'to' => $currentSource,
+                    'backup_level' => $registro->backup_level,
+                    'power_event_at' => optional($registro->power_event_at)->toISOString(),
+                ]
+            );
+
+            return;
+        }
+
+        if ($currentSource === 'mains') {
+            $this->resolveAlert($device, 'power_outage');
+
+            if ($hasChanged && $previousSource === 'backup') {
+                $this->createOrBumpActiveAlert(
+                    $device,
+                    'power_restored',
+                    'leve',
+                    'Energía principal restablecida',
+                    sprintf('El dispositivo %s volvió a energía principal.', $device->name),
+                    [
+                        'from' => $previousSource,
+                        'to' => $currentSource,
+                        'backup_level' => $registro->backup_level,
+                        'power_event_at' => optional($registro->power_event_at)->toISOString(),
+                    ]
+                );
+            }
+
+            return;
+        }
+
+        if ($hasChanged) {
+            $this->createOrBumpActiveAlert(
+                $device,
+                'power_source_changed',
+                'media',
+                'Cambio de fuente de energía',
+                sprintf('El dispositivo %s cambió su estado de energía (%s -> %s).', $device->name, $previousSource, $currentSource),
+                [
+                    'from' => $previousSource,
+                    'to' => $currentSource,
+                    'backup_level' => $registro->backup_level,
+                    'power_event_at' => optional($registro->power_event_at)->toISOString(),
+                ]
+            );
+        }
+    }
+
     /**
      * @param  array<string, mixed>|null  $data
      */
@@ -179,7 +259,7 @@ class AlertEvaluatorService
         return $newAlert;
     }
 
-    private function resolveAlert(Device $device, string $type): void
+    public function resolveAlert(Device $device, string $type): void
     {
         Alert::query()
             ->where('device_id', $device->id)

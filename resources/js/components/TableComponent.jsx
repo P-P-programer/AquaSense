@@ -6,6 +6,7 @@ const estadoLabel = { ok: "Normal", warn: "Alerta", danger: "Crítico" };
 export default function TableComponent() {
   const [data,  setData]  = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.getRegistros()
@@ -13,7 +14,8 @@ export default function TableComponent() {
         // Muestra los 6 más recientes, del más nuevo al más viejo
         setData([...registros].reverse().slice(0, 6));
       })
-      .catch(err => setError(err.message));
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   if (error) return (
@@ -22,10 +24,22 @@ export default function TableComponent() {
     </div>
   );
 
-  if (!data.length) return (
+  if (loading) return (
     <div className="aq-loading">
       <div className="aq-spinner"></div>
       Cargando registros...
+    </div>
+  );
+
+  if (!data.length) return (
+    <div className="aq-panel">
+      <div className="aq-panel-title">
+        <i className="bi bi-table"></i>
+        Registros históricos
+      </div>
+      <div className="aq-empty-state">
+        No hay lecturas aún. Cuando el dispositivo envíe datos, aparecerán aquí automáticamente.
+      </div>
     </div>
   );
 

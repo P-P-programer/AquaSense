@@ -18,6 +18,9 @@ class Registro extends Model
         'temperatura',
         'estado',
         'source',
+        'power_source',
+        'backup_level',
+        'power_event_at',
     ];
 
     protected function casts(): array
@@ -28,6 +31,8 @@ class Registro extends Model
             'consumo' => 'decimal:2',
             'turbidez' => 'decimal:2',
             'temperatura' => 'decimal:2',
+            'backup_level' => 'decimal:2',
+            'power_event_at' => 'datetime',
         ];
     }
 

@@ -22,6 +22,7 @@ class StatsController extends Controller
         $promedioDiario = (float) $monthQuery->avg('consumo');
 
         $latest = Registro::query()->orderByDesc('captured_at')->first();
+        $registrosCount = Registro::query()->count();
 
         $alertasQuery = Alert::query()->where('status', 'active');
 
@@ -40,6 +41,8 @@ class StatsController extends Controller
             'turbidez' => $latest?->turbidez,
             'temperatura' => $latest?->temperatura,
             'alertas' => $alertas,
+            'has_registros' => $registrosCount > 0,
+            'last_captured_at' => optional($latest?->captured_at)->toISOString(),
         ]);
     }
 }

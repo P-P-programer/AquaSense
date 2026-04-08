@@ -42,6 +42,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState("");
 
   const [userForm, setUserForm] = useState({
     id: null,
@@ -71,6 +72,7 @@ export default function AdminPanel() {
   async function loadAll() {
     setLoading(true);
     setError(null);
+    setSuccess("");
 
     try {
       const [usersData, devicesData] = await Promise.all([
@@ -190,6 +192,7 @@ export default function AdminPanel() {
 
     setSearchingPlace(true);
     setError(null);
+    setSuccess("");
 
     try {
       const results = await api.geocodeSearch(query);
@@ -215,6 +218,7 @@ export default function AdminPanel() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setSuccess("");
 
     try {
       const payload = {
@@ -230,8 +234,10 @@ export default function AdminPanel() {
 
       if (userForm.id) {
         await api.updateAdminUser(userForm.id, payload);
+        setSuccess("Usuario actualizado correctamente.");
       } else {
         await api.createAdminUser({ ...payload, password: userForm.password });
+        setSuccess("Usuario creado correctamente.");
       }
 
       await loadAll();
@@ -247,6 +253,7 @@ export default function AdminPanel() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setSuccess("");
 
     try {
       const payload = {
@@ -261,8 +268,10 @@ export default function AdminPanel() {
 
       if (deviceForm.id) {
         await api.updateAdminDevice(deviceForm.id, payload);
+        setSuccess("Dispositivo actualizado correctamente.");
       } else {
         await api.createAdminDevice(payload);
+        setSuccess("Dispositivo creado correctamente.");
       }
 
       await loadAll();
@@ -281,6 +290,7 @@ export default function AdminPanel() {
     setSaving(true);
     setError(null);
     setGeneratedToken(null);
+    setSuccess("");
 
     try {
       const response = await api.createAdminDeviceToken(selectedDeviceId, {
@@ -289,6 +299,7 @@ export default function AdminPanel() {
 
       setGeneratedToken(response);
       setTokens((current) => [response.device_token, ...current]);
+      setSuccess("Token generado correctamente.");
       e.target.reset();
     } catch (err) {
       setError(err.message ?? "No se pudo generar el token.");
@@ -300,11 +311,13 @@ export default function AdminPanel() {
   async function revokeToken(tokenId) {
     setSaving(true);
     setError(null);
+    setSuccess("");
 
     try {
       await api.revokeAdminDeviceToken(tokenId);
       const freshTokens = await api.getAdminDeviceTokens(selectedDeviceId);
       setTokens(freshTokens);
+      setSuccess("Token revocado correctamente.");
     } catch (err) {
       setError(err.message ?? "No se pudo revocar el token.");
     } finally {
@@ -342,6 +355,7 @@ export default function AdminPanel() {
       </div>
 
       {error && <div className="aq-alert-error"><i className="bi bi-exclamation-triangle"></i> {error}</div>}
+      {success && <div className="aq-alert-success"><i className="bi bi-check-circle"></i> {success}</div>}
       {loading && <div className="aq-loading"><div className="aq-spinner"></div> Cargando panel admin...</div>}
 
       {devices.length > 0 && (
