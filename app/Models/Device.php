@@ -15,6 +15,8 @@ class Device extends Model
         'identifier',
         'is_active',
         'last_seen_at',
+        'last_heartbeat_at',
+        'connectivity_alerts_enabled',
         'expected_latitude',
         'expected_longitude',
         'expected_radius_m',
@@ -30,7 +32,9 @@ class Device extends Model
     {
         return [
             'is_active' => 'boolean',
+            'connectivity_alerts_enabled' => 'boolean',
             'last_seen_at' => 'datetime',
+            'last_heartbeat_at' => 'datetime',
             'last_location_at' => 'datetime',
             'expected_latitude' => 'float',
             'expected_longitude' => 'float',

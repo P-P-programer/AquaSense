@@ -19,6 +19,9 @@
 <body>
     <div id="app"></div>
     <script>
+        // Web Push VAPID Key
+        window.__VAPID_PUBLIC_KEY_ = '{{ config("webpush.vapid_public_key") }}';
+
         if ('serviceWorker' in navigator) {
             const swVersion = '{{ substr(md5_file(public_path("sw.js")), 0, 10) }}';
             const swUrl = `/sw.js?v=${swVersion}`;

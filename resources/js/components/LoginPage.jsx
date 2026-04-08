@@ -6,6 +6,7 @@ export default function LoginPage() {
 
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error,    setError]    = useState(null);
   const [loading,  setLoading]  = useState(false);
 
@@ -15,7 +16,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, remember);
       // El AuthContext actualiza `user` → App.jsx redirige al dashboard automáticamente
     } catch (err) {
       setError(err.message ?? "Credenciales incorrectas o cuenta inactiva.");
@@ -71,6 +72,16 @@ export default function LoginPage() {
             minLength={8}
             disabled={loading}
           />
+
+          <label className="aq-switch-row" style={{ marginTop: "0.9rem" }}>
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              disabled={loading}
+            />
+            <span>Mantener sesión activa</span>
+          </label>
 
           <button
             type="submit"

@@ -29,6 +29,11 @@ class UserAlertPreferenceController extends Controller
             'alerts_min_severity' => ['sometimes', 'in:leve,media,alta,critica'],
         ]);
 
+        if ($user->role === 'admin') {
+            // Seguridad: para admins, alertas críticas por email siempre activadas.
+            $data['alerts_notify_email'] = true;
+        }
+
         $user->forceFill($data)->save();
 
         return response()->json([

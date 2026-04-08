@@ -77,7 +77,7 @@ const api = {
   patch: (path, body) => request("PATCH", path, body),
   delete: (path) => request("DELETE", path),
 
-  login: (email, password) => api.post("/login", { email, password }),
+  login: (email, password, remember = false) => api.post("/login", { email, password, remember, remember_me: remember }),
   logout: () => api.post("/logout"),
   me: () => api.get("/me"),
   getStats: () => api.get("/stats"),
@@ -111,6 +111,15 @@ const api = {
   getAdminDeviceTokens: (deviceId) => api.get(`/admin/devices/${deviceId}/tokens`),
   createAdminDeviceToken: (deviceId, payload) => api.post(`/admin/devices/${deviceId}/tokens`, payload),
   revokeAdminDeviceToken: (deviceTokenId) => api.patch(`/admin/device-tokens/${deviceTokenId}/revoke`),
+  
+  // Push Notifications
+  subscribeToPush: (payload) => api.post("/push/subscribe", payload),
+  unsubscribeFromPush: (payload) => api.post("/push/unsubscribe", payload),
+  getPushStatus: () => api.get("/push/status"),
+
+  // Connectivity Settings
+  getConnectivitySettings: (deviceId) => api.get(`/admin/devices/${deviceId}/connectivity-settings`),
+  updateConnectivitySettings: (deviceId, payload) => api.patch(`/admin/devices/${deviceId}/connectivity-settings`, payload),
 
   geocodeSearch: async (query) => {
     const q = String(query ?? "").trim();

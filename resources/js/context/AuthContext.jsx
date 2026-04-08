@@ -28,10 +28,10 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email, password) {
+  async function login(email, password, remember = false) {
     setError(null);
     try {
-      await api.login(email, password);
+      await api.login(email, password, remember);
       const userData = await api.me();
       const safeUser = normalizeUser(userData);
       setUser(safeUser);

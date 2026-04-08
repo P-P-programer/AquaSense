@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Mail\AlertTriggeredMail;
+use App\Mail\CriticalAlertNotification;
 use App\Models\Alert;
+use App\Models\PushSubscription;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +13,8 @@ use Illuminate\Support\Facades\Mail;
 
 class AlertNotificationService
 {
+    public function __construct(private readonly WebPushService $webPushService) {}
+
     /**
      * @return array<string, int>
      */
@@ -27,29 +31,57 @@ class AlertNotificationService
 
     private function notifyByEmail(Alert $alert): int
     {
+        $device = $alert->device;
+        $user = $device?->user;
+
+        // CRÍTICAS: Email al admin SIEMPRE (obligatorio por seguridad)
+        if ($alert->severity === 'critica' && $device && $user) {
+            $admin = User::where('role', 'admin')->where('is_active', true)->first();
+
+            if ($admin) {
+                Mail::to($admin->email)->queue(
+                    new CriticalAlertNotification(
+                        alert: $alert,
+                        device: $device,
+                        user: $user,
+                        location: "{$device->last_latitude}, {$device->last_longitude}",
+                        timestamp: now()->format('Y-m-d H:i:s'),
+                        details: [
+                            'alert_type' => $alert->type,
+                            'alert_title' => $alert->title,
+                            'alert_message' => $alert->message,
+                            'backup_level' => $alert->data['backup_level'] ?? null,
+                            'time_in_backup' => $alert->data['time_in_backup'] ?? null,
+                        ]
+                    )
+                );
+            }
+        }
+
+        // Otros niveles: respectar preferencias globales y del usuario
         if (! $this->matchesGlobalMinSeverity($alert->severity, (string) config('alerts.mail_min_severity', 'alta'))) {
-            return 0;
+            $alert->forceFill(['notified_email_at' => now()])->save();
+            return 1; // Contabilizar al admin
         }
 
         $recipients = $this->eligibleUsers($alert, true, false);
 
         if ($recipients->isEmpty()) {
-            return 0;
+            $alert->forceFill(['notified_email_at' => now()])->save();
+            return 1; // Contabilizar al admin
         }
 
-        foreach ($recipients as $user) {
-            if (! $this->matchesUserMinSeverity($alert->severity, (string) $user->alerts_min_severity)) {
+        foreach ($recipients as $rec) {
+            if (! $this->matchesUserMinSeverity($alert->severity, (string) $rec->alerts_min_severity)) {
                 continue;
             }
 
-            Mail::to($user->email)->queue(new AlertTriggeredMail($alert));
+            Mail::to($rec->email)->queue(new AlertTriggeredMail($alert));
         }
 
-        $alert->forceFill([
-            'notified_email_at' => now(),
-        ])->save();
+        $alert->forceFill(['notified_email_at' => now()])->save();
 
-        return $recipients->count();
+        return $recipients->count() + 1; // +1 por el admin
     }
 
     private function notifyByPush(Alert $alert): int
@@ -58,24 +90,51 @@ class AlertNotificationService
             return 0;
         }
 
-        $recipients = $this->eligibleUsers($alert, false, true);
+        $device = $alert->device;
+        $pushed = 0;
 
-        if ($recipients->isEmpty()) {
-            return 0;
+        // Web Push a Admin (críticas siempre)
+        if ($alert->severity === 'critica') {
+            $adminSubs = PushSubscription::where('is_admin', true)->get();
+            foreach ($adminSubs as $sub) {
+                if ($this->webPushService->sendToSubscription(
+                    $sub,
+                    "🚨 {$alert->title}",
+                    "Dispositivo: {$device->name} • {$alert->message}",
+                    ['requireInteraction' => true]
+                )) {
+                    $pushed++;
+                }
+            }
         }
 
-        // Placeholder de canal push: deja trazabilidad y marca de envío.
-        Log::info('AquaSense push notification pending implementation (web push provider)', [
+        // Web Push a Usuario (si tiene suscripciones activas)
+        if ($device->user) {
+            $userSubs = PushSubscription::where('user_id', $device->user->id)
+                ->where('is_admin', false)
+                ->get();
+
+            foreach ($userSubs as $sub) {
+                if ($this->webPushService->sendToSubscription(
+                    $sub,
+                    $alert->title,
+                    $alert->message,
+                    ['tag' => "alert-{$alert->id}"]
+                )) {
+                    $pushed++;
+                }
+            }
+        }
+
+        Log::info('WebPush notifications sent', [
             'alert_id' => $alert->id,
             'severity' => $alert->severity,
-            'recipients' => $recipients->pluck('id')->all(),
+            'count' => $pushed,
         ]);
 
-        $alert->forceFill([
-            'notified_push_at' => now(),
-        ])->save();
+        $alert->forceFill(['notified_push_at' => now()])->save();
 
-        return $recipients->count();
+        return $pushed;
     }
 
     /**
@@ -85,10 +144,7 @@ class AlertNotificationService
     {
         $query = User::query()
             ->where('is_active', true)
-            ->where(function ($q) use ($alert) {
-                $q->where('role', 'admin')
-                    ->orWhere('id', $alert->device?->user_id);
-            });
+            ->where('id', $alert->device?->user_id);
 
         if ($forEmail) {
             $query->where('alerts_notify_email', true);
