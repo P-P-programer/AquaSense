@@ -20,8 +20,39 @@
     <div id="app"></div>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+            const swVersion = '{{ substr(md5_file(public_path("sw.js")), 0, 10) }}';
+            const swUrl = `/sw.js?v=${swVersion}`;
+            let refreshing = false;
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                refreshing = true;
+                window.location.reload();
+            });
+
+            navigator.serviceWorker.register(swUrl)
+                .then((reg) => {
+                    console.log('[PWA] Service Worker registrado:', reg.scope);
+
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (!newWorker) return;
+
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    });
+
+                    setInterval(() => {
+                        reg.update().catch(() => {});
+                    }, 60000);
+                })
                 .catch(err => console.error('[PWA] Error registrando Service Worker:', err));
         }
     </script>

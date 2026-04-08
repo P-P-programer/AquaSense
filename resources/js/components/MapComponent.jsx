@@ -84,16 +84,17 @@ export default function MapComponent({
   useEffect(() => {
     if (!map.current) return;
 
+    Object.values(markersRef.current).forEach((marker) => {
+      map.current.removeLayer(marker);
+    });
+    Object.values(circlesRef.current).forEach((circle) => {
+      map.current.removeLayer(circle);
+    });
+    markersRef.current = {};
+    circlesRef.current = {};
+
     devices.forEach((device) => {
       const markerId = `device_${device.id}`;
-
-      // Eliminar marcador existente
-      if (markersRef.current[markerId]) {
-        map.current.removeLayer(markersRef.current[markerId]);
-      }
-      if (circlesRef.current[markerId]) {
-        map.current.removeLayer(circlesRef.current[markerId]);
-      }
 
       // Si tiene ubicación, agregar marcador
       if (device.last_latitude && device.last_longitude) {
