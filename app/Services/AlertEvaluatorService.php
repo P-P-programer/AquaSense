@@ -42,7 +42,7 @@ class AlertEvaluatorService
         $this->createOrBumpActiveAlert(
             $device,
             'offline',
-            'critica',
+            'alta',
             'Dispositivo sin señal',
             sprintf('El dispositivo %s no reporta heartbeat hace %d minutos.', $device->name, $minutesWithoutHeartbeat),
             [

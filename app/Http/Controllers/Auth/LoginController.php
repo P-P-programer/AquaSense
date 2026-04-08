@@ -71,22 +71,28 @@ class LoginController extends Controller
 
     public function apiLogin(LoginRequest $request): \Illuminate\Http\JsonResponse
     {
-    $user = $this->loginService->attempt($request->credentials());
+        $credentials = $request->credentials();
 
-    if (! $user) {
+        if ($request->has('remember_me')) {
+            $credentials['remember'] = $request->boolean('remember_me');
+        }
+
+        $user = $this->loginService->attempt($credentials);
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Las credenciales no son correctas o la cuenta está inactiva.',
+            ], 401);
+        }
+
+        $request->session()->regenerate();
+
+        $this->sessionLogService->logLogin($user, $request);
+
         return response()->json([
-            'message' => 'Las credenciales no son correctas o la cuenta está inactiva.',
-        ], 401);
-    }
-
-    $request->session()->regenerate();
-
-    $this->sessionLogService->logLogin($user, $request);
-
-    return response()->json([
-        'message' => 'Autenticado correctamente.',
-        'user'    => $user,
-    ]);
+            'message' => 'Autenticado correctamente.',
+            'user'    => $user,
+        ]);
     }   
 
 /**

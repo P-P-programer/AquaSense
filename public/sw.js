@@ -1,3 +1,55 @@
+
+// Manejar notificaciones push
+self.addEventListener('push', event => {
+  if (!event.data) return;
+
+  let pushData;
+  try {
+    pushData = event.data.json();
+  } catch (e) {
+    pushData = {
+      title: 'AquaSense',
+      body: event.data.text() || 'Nueva notificación',
+      icon: '/build/assets/icon-192.png',
+      badge: '/build/assets/badge-72.png',
+    };
+  }
+
+  const options = {
+    body: pushData.body || '',
+    icon: pushData.icon || '/build/assets/icon-192.png',
+    badge: pushData.badge || '/build/assets/badge-72.png',
+    tag: pushData.tag || 'aquasense-notification',
+    requireInteraction: pushData.requireInteraction || false,
+    data: pushData.data || {},
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(pushData.title, options)
+  );
+});
+
+// Manejar clicks en notificaciones
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Buscar si ya hay una ventana abierta
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+
+      // Si no hay ventana, abrir una nueva
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
+});
 const swUrl = new URL(self.location.href);
 const BUILD_VERSION = swUrl.searchParams.get('v') || 'dev';
 const CACHE_VERSION = `aquasense-cache-${BUILD_VERSION}`;
@@ -60,39 +112,41 @@ self.addEventListener('fetch', event => {
     || url.pathname.endsWith('.ico');
 
   if (isStaticAsset) {
-    event.respondWith(
-      caches.open(CACHE_VERSION).then(cache => {
-        return cache.match(request).then(cached => {
-          const networkFetch = fetch(request).then(response => {
-            if (response && response.status === 200) {
-              cache.put(request, response.clone());
+      event.respondWith((async () => {
+        const cache = await caches.open(CACHE_VERSION);
+        const cached = await cache.match(request);
+
+        const networkFetch = fetch(request)
+          .then(async response => {
+            if (response && response.ok) {
+              const responseToCache = response.clone();
+              await cache.put(request, responseToCache);
             }
 
             return response;
-          }).catch(() => cached);
+          })
+          .catch(() => cached);
 
-          return cached || networkFetch;
-        });
-      })
-    );
+        return cached || networkFetch;
+      })());
 
     return;
   }
 
   // HTML y navegación: network-first para traer siempre versión nueva en deploy.
-  event.respondWith(
-    fetch(request)
-      .then(res => {
-        if (res.status === 200) {
-          caches.open(CACHE_VERSION).then(cache => {
-            cache.put(request, res.clone());
-          });
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+
+        if (response && response.ok) {
+          const cache = await caches.open(CACHE_VERSION);
+          const responseToCache = response.clone();
+          await cache.put(request, responseToCache);
         }
 
-        return res;
-      })
-      .catch(() => {
+        return response;
+      } catch (error) {
         return caches.match(request) || caches.match('/');
-      })
-  );
+      }
+    })());
 });

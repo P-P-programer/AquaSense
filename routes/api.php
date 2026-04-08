@@ -4,11 +4,13 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Api\Admin\DeviceController;
 use App\Http\Controllers\Api\Admin\DeviceTokenController;
 use App\Http\Controllers\Api\Admin\UserController;
+use App\Http\Controllers\Api\Admin\ConnectivitySettingsController;
 use App\Http\Controllers\Api\DeviceIngestController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\UserAlertPreferenceController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
+use App\Http\Controllers\Api\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -30,6 +32,11 @@ Route::middleware('web')->group(function () {
         Route::patch('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
         Route::get('/me/alert-preferences', [UserAlertPreferenceController::class, 'show']);
         Route::patch('/me/alert-preferences', [UserAlertPreferenceController::class, 'update']);
+
+        // Push Notifications
+        Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
+        Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
+        Route::get('/push/status', [PushSubscriptionController::class, 'status']);
     });
 
     Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -42,6 +49,10 @@ Route::middleware('web')->group(function () {
         Route::post('/admin/devices', [DeviceController::class, 'store']);
         Route::get('/admin/devices/{device}', [DeviceController::class, 'show']);
         Route::patch('/admin/devices/{device}', [DeviceController::class, 'update']);
+
+        // Connectivity Settings
+        Route::get('/admin/devices/{device}/connectivity-settings', [ConnectivitySettingsController::class, 'show']);
+        Route::patch('/admin/devices/{device}/connectivity-settings', [ConnectivitySettingsController::class, 'update']);
         Route::get('/admin/devices/{device}/locations', [DeviceController::class, 'locations']);
 
         Route::get('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'index']);

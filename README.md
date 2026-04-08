@@ -41,6 +41,18 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Web Push Setup
+
+El proyecto usa Web Push para notificaciones en navegador con VAPID. Cada entorno debe tener su propio par de claves.
+
+1. Copia `.env.example` a `.env` si todavía no lo hiciste.
+2. Genera las claves con `php artisan webpush:generate-vapid-keys`.
+3. Pega `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en tu `.env`.
+4. En producción, usa un par estable y no lo versionas.
+5. Si rotas las claves, los usuarios deberán volver a suscribirse a push.
+
+`ALERT_PUSH_MIN_SEVERITY` controla desde qué severidad se envían notificaciones push. Para administradores, las alertas críticas por correo quedan forzadas por seguridad.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

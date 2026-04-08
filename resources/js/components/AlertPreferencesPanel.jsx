@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function AlertPreferencesPanel() {
+  const { isAdmin } = useAuth();
   const [form, setForm] = useState({
     alerts_notify_email: true,
     alerts_notify_push: true,
@@ -58,13 +60,20 @@ export default function AlertPreferencesPanel() {
       {okMessage && <div className="aq-loading">{okMessage}</div>}
 
       <form onSubmit={submit} className="aq-admin-form">
+        {isAdmin() && (
+          <div className="aq-alert-warning" style={{ marginBottom: "0.75rem" }}>
+            <i className="bi bi-shield-lock"></i> En cuentas admin, el correo para alertas críticas es obligatorio.
+          </div>
+        )}
+
         <label className="aq-switch-row">
           <input
             type="checkbox"
             checked={form.alerts_notify_email}
+            disabled={isAdmin()}
             onChange={(e) => setForm((cur) => ({ ...cur, alerts_notify_email: e.target.checked }))}
           />
-          <span>Recibir alertas por correo</span>
+          <span>{isAdmin() ? "Recibir alertas por correo (siempre activo en admin)" : "Recibir alertas por correo"}</span>
         </label>
 
         <label className="aq-switch-row">
@@ -73,7 +82,7 @@ export default function AlertPreferencesPanel() {
             checked={form.alerts_notify_push}
             onChange={(e) => setForm((cur) => ({ ...cur, alerts_notify_push: e.target.checked }))}
           />
-          <span>Recibir alertas por push (canal preparado)</span>
+          <span>Recibir alertas por push</span>
         </label>
 
         <div>

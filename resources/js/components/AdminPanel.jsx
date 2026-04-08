@@ -59,6 +59,7 @@ export default function AdminPanel() {
     name: "",
     identifier: "",
     is_active: true,
+    connectivity_alerts_enabled: false,
     expected_latitude: "",
     expected_longitude: "",
     expected_radius_m: 100,
@@ -138,6 +139,7 @@ export default function AdminPanel() {
       name: "",
       identifier: "",
       is_active: true,
+      connectivity_alerts_enabled: false,
       expected_latitude: "",
       expected_longitude: "",
       expected_radius_m: 100,
@@ -185,8 +187,7 @@ export default function AdminPanel() {
     }));
   }
 
-  async function searchPlaces(e) {
-    e.preventDefault();
+  async function searchPlaces() {
     const query = placeQuery.trim();
     if (!query) return;
 
@@ -261,6 +262,7 @@ export default function AdminPanel() {
         name: deviceForm.name,
         identifier: deviceForm.identifier || undefined,
         is_active: deviceForm.is_active,
+        connectivity_alerts_enabled: deviceForm.connectivity_alerts_enabled,
         expected_latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
         expected_longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
         expected_radius_m: deviceForm.expected_radius_m ? Number(deviceForm.expected_radius_m) : 100,
@@ -482,6 +484,20 @@ export default function AdminPanel() {
                   <span>Dispositivo activo</span>
                 </div>
               </div>
+                <div>
+                  <label className="aq-input-label" style={{ color: deviceForm.connectivity_alerts_enabled ? '#dc2626' : 'inherit' }}>
+                    {deviceForm.connectivity_alerts_enabled && '🧪'} Monitoreo de Conectividad
+                  </label>
+                  <div className="aq-switch-row" style={{ marginBottom: 8 }}>
+                    <input type="checkbox" checked={deviceForm.connectivity_alerts_enabled} onChange={(e) => setDeviceForm((cur) => ({ ...cur, connectivity_alerts_enabled: e.target.checked }))} />
+                    <span>{deviceForm.connectivity_alerts_enabled ? 'MODO DEBUG ACTIVO' : 'Alertas desactivadas'}</span>
+                  </div>
+                  <div className="aq-table-meta" style={{ fontSize: '0.75rem', marginBottom: 0 }}>
+                    {deviceForm.connectivity_alerts_enabled 
+                      ? '⚠️ Recibirás alertas críticas cuando el dispositivo no reporte en 5 minutos. Usa solo en DEBUG.' 
+                      : 'Las alertas de desconexión están desactivadas.'}
+                  </div>
+                </div>
               <div>
                 <label className="aq-input-label">Latitud esperada</label>
                 <input className="aq-input" type="number" step="0.0000001" value={deviceForm.expected_latitude} onChange={(e) => setDeviceForm((cur) => ({ ...cur, expected_latitude: e.target.value }))} placeholder="Ej. 4.7110000" />
@@ -513,17 +529,17 @@ export default function AdminPanel() {
                 </span>
               </div>
 
-              <form className="aq-zone-search" onSubmit={searchPlaces}>
+              <div className="aq-zone-search">
                 <input
                   className="aq-input"
                   value={placeQuery}
                   onChange={(e) => setPlaceQuery(e.target.value)}
                   placeholder="Buscar ciudad o dirección (ej. Bogotá, Calle 100...)"
                 />
-                <button type="submit" className="aq-btn-secondary" disabled={searchingPlace}>
+                <button type="button" className="aq-btn-secondary" onClick={searchPlaces} disabled={searchingPlace}>
                   {searchingPlace ? "Buscando..." : "Buscar"}
                 </button>
-              </form>
+              </div>
 
               {placeResults.length > 0 && (
                 <div className="aq-zone-results">

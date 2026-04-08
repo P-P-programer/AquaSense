@@ -97,6 +97,7 @@ class DeviceIngestController extends Controller
 
             $deviceUpdate = [
                 'last_seen_at' => now(),
+                'last_heartbeat_at' => now(),
             ];
 
             if ($locationPayload) {
