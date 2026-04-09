@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use const FILTER_VALIDATE_EMAIL;
 use App\Mail\AlertTriggeredMail;
 use App\Mail\CriticalAlertNotification;
 use App\Models\Alert;
@@ -33,12 +34,25 @@ class AlertNotificationService
     {
         $device = $alert->device;
         $user = $device?->user;
+        $adminMailCount = 0;
 
         // CRÍTICAS: Email al admin SIEMPRE (obligatorio por seguridad)
         if ($alert->severity === 'critica' && $device && $user) {
-            $admin = User::where('role', 'admin')->where('is_active', true)->first();
+            $admins = User::query()
+                ->where('role', 'admin')
+                ->where('is_active', true)
+                ->whereNotNull('email')
+                ->get();
 
-            if ($admin) {
+            foreach ($admins as $admin) {
+                if (! filter_var($admin->email, FILTER_VALIDATE_EMAIL)) {
+                    Log::warning('Skipping admin alert email due invalid address', [
+                        'user_id' => $admin->id,
+                        'email' => $admin->email,
+                    ]);
+                    continue;
+                }
+
                 Mail::to($admin->email)->queue(
                     new CriticalAlertNotification(
                         alert: $alert,
@@ -55,24 +69,31 @@ class AlertNotificationService
                         ]
                     )
                 );
+
+                $adminMailCount++;
             }
         }
 
-        // Otros niveles: respectar preferencias globales y del usuario
+        // Otros niveles: respetar preferencias globales y del usuario
         if (! $this->matchesGlobalMinSeverity($alert->severity, (string) config('alerts.mail_min_severity', 'alta'))) {
             $alert->forceFill(['notified_email_at' => now()])->save();
-            return 1; // Contabilizar al admin
+            return $adminMailCount;
         }
 
         $recipients = $this->eligibleUsers($alert, true, false);
 
         if ($recipients->isEmpty()) {
             $alert->forceFill(['notified_email_at' => now()])->save();
-            return 1; // Contabilizar al admin
+            return $adminMailCount;
         }
 
         foreach ($recipients as $rec) {
             if (! $this->matchesUserMinSeverity($alert->severity, (string) $rec->alerts_min_severity)) {
+                continue;
+            }
+
+            // Evitar duplicado: si el usuario destinatario también es admin ya recibió el correo crítico.
+            if ($alert->severity === 'critica' && $rec->role === 'admin') {
                 continue;
             }
 
@@ -81,7 +102,7 @@ class AlertNotificationService
 
         $alert->forceFill(['notified_email_at' => now()])->save();
 
-        return $recipients->count() + 1; // +1 por el admin
+        return $recipients->count() + $adminMailCount;
     }
 
     private function notifyByPush(Alert $alert): int
@@ -95,7 +116,8 @@ class AlertNotificationService
 
         // Web Push a Admin (críticas siempre)
         if ($alert->severity === 'critica') {
-            $adminSubs = PushSubscription::where('is_admin', true)->get();
+            /** @var Collection<int, PushSubscription> $adminSubs */
+            $adminSubs = PushSubscription::query()->where('is_admin', true)->get();
             foreach ($adminSubs as $sub) {
                 if ($this->webPushService->sendToSubscription(
                     $sub,
@@ -110,7 +132,8 @@ class AlertNotificationService
 
         // Web Push a Usuario (si tiene suscripciones activas)
         if ($device->user) {
-            $userSubs = PushSubscription::where('user_id', $device->user->id)
+            /** @var Collection<int, PushSubscription> $userSubs */
+            $userSubs = PushSubscription::query()->where('user_id', $device->user->id)
                 ->where('is_admin', false)
                 ->get();
 

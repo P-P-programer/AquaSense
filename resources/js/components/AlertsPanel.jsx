@@ -26,7 +26,36 @@ export default function AlertsPanel() {
   const [pushPermission, setPushPermission] = useState(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission,
   );
+  const [pushSubscribed, setPushSubscribed] = useState(null);
   const notifiedAlertsRef = useRef(new Set());
+
+  async function registerWebPushSubscription() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      throw new Error("Web Push no es compatible en este navegador.");
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      const vapidPublicKey = window.__VAPID_PUBLIC_KEY_;
+      if (!vapidPublicKey) {
+        throw new Error("VAPID_PUBLIC_KEY no configurada");
+      }
+
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+    }
+
+    await api.subscribeToPush({
+      endpoint: subscription.endpoint,
+      keys: subscription.toJSON().keys,
+    });
+
+    setPushSubscribed(true);
+  }
 
   async function loadAlerts({ silent = false } = {}) {
     if (!silent) {
@@ -79,30 +108,12 @@ export default function AlertsPanel() {
     const permission = await Notification.requestPermission();
     setPushPermission(permission);
 
-    if (permission !== "granted" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (permission !== "granted") {
       return;
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        const vapidPublicKey = window.__VAPID_PUBLIC_KEY_;
-        if (!vapidPublicKey) {
-          throw new Error("VAPID_PUBLIC_KEY no configurada");
-        }
-
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        });
-      }
-
-      await api.subscribeToPush({
-        endpoint: subscription.endpoint,
-        keys: subscription.toJSON().keys,
-      });
+      await registerWebPushSubscription();
     } catch (err) {
       setError(err.message ?? "No se pudo activar Web Push.");
     }
@@ -124,6 +135,26 @@ export default function AlertsPanel() {
   useEffect(() => {
     loadAlerts();
   }, [statusFilter]);
+
+  useEffect(() => {
+    api.getPushStatus()
+      .then((status) => setPushSubscribed(Boolean(status?.subscribed)))
+      .catch(() => setPushSubscribed(false));
+  }, []);
+
+  useEffect(() => {
+    if (pushPermission !== "granted") {
+      return;
+    }
+
+    if (pushSubscribed === true) {
+      return;
+    }
+
+    registerWebPushSubscription().catch(() => {
+      // Mantener silencioso: el usuario puede reintentar con el botón.
+    });
+  }, [pushPermission, pushSubscribed]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -181,10 +212,13 @@ export default function AlertsPanel() {
 
       <div className="aq-table-meta" style={{ marginBottom: "0.9rem" }}>
         Notificaciones del navegador: {pushPermission}
-        {pushPermission !== "granted" && pushPermission !== "unsupported" && (
-          <button type="button" className="aq-link-button" onClick={enableBrowserPush}>
-            Activar
-          </button>
+        {pushPermission !== "unsupported" && (
+          <>
+            <span> · Suscripción push: {pushSubscribed === null ? "verificando..." : pushSubscribed ? "activa" : "inactiva"}</span>
+            <button type="button" className="aq-link-button" onClick={enableBrowserPush}>
+              {pushPermission === "granted" ? "Reintentar registro" : "Activar"}
+            </button>
+          </>
         )}
       </div>
 
