@@ -37,7 +37,7 @@ class AlertNotificationService
         $adminMailCount = 0;
 
         // CRÍTICAS: Email al admin SIEMPRE (obligatorio por seguridad)
-        if ($alert->severity === 'critica' && $device && $user) {
+        if ($alert->severity === 'critica' && $device) {
             $admins = User::query()
                 ->where('role', 'admin')
                 ->where('is_active', true)
@@ -57,7 +57,7 @@ class AlertNotificationService
                     new CriticalAlertNotification(
                         alert: $alert,
                         device: $device,
-                        user: $user,
+                        user: $user ?? $admin,
                         location: "{$device->last_latitude}, {$device->last_longitude}",
                         timestamp: now()->format('Y-m-d H:i:s'),
                         details: [
