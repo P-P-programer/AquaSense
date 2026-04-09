@@ -41,6 +41,8 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    'survey_debug_mode' => (bool) env('SURVEY_DEBUG_MODE', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

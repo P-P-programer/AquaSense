@@ -111,6 +111,10 @@ const api = {
   getAdminDeviceTokens: (deviceId) => api.get(`/admin/devices/${deviceId}/tokens`),
   createAdminDeviceToken: (deviceId, payload) => api.post(`/admin/devices/${deviceId}/tokens`, payload),
   revokeAdminDeviceToken: (deviceTokenId) => api.patch(`/admin/device-tokens/${deviceTokenId}/revoke`),
+
+  createSurveyResponse: (payload) => api.post('/survey/responses', payload),
+  getSurveyResponses: (limit = 200) => api.get(`/survey/responses?limit=${limit}`),
+  getSurveySummary: () => api.get('/survey/summary'),
   
   // Push Notifications
   subscribeToPush: (payload) => api.post("/push/subscribe", payload),
