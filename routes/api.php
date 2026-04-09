@@ -11,7 +11,6 @@ use App\Http\Controllers\Api\UserAlertPreferenceController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
-use App\Http\Controllers\Api\SurveyController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -60,16 +59,6 @@ Route::middleware('web')->group(function () {
         Route::post('/admin/devices/{device}/tokens', [DeviceTokenController::class, 'store']);
         Route::patch('/admin/device-tokens/{deviceToken}/revoke', [DeviceTokenController::class, 'revoke']);
     });
-
-    // Modo encuesta provisional (rama temporal)
-    Route::post('/survey/responses', [SurveyController::class, 'store'])
-        ->middleware('throttle:20,1');
-
-    Route::get('/survey/responses', [SurveyController::class, 'index'])
-        ->middleware('throttle:60,1');
-
-    Route::get('/survey/summary', [SurveyController::class, 'summary'])
-        ->middleware('throttle:60,1');
 });
 
 Route::post('/devices/ingest', [DeviceIngestController::class, 'store'])

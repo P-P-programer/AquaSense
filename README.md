@@ -53,12 +53,6 @@ El proyecto usa Web Push para notificaciones en navegador con VAPID. Cada entorn
 
 `ALERT_PUSH_MIN_SEVERITY` controla desde qué severidad se envían notificaciones push. Para administradores, las alertas críticas por correo quedan forzadas por seguridad.
 
-## Survey Debug Mode
-
-Si quieres usar la encuesta provisional dentro de AquaSense, activa `SURVEY_DEBUG_MODE=true` en tu `.env`.
-Con ese flag, el welcome de la raíz sirve el modo encuesta y también queda disponible en `/encuesta`.
-La tabla usada es `survey_responses` y el cambio está pensado para ser temporal y fácil de retirar.
-
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
