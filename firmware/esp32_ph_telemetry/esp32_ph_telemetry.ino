@@ -19,7 +19,11 @@ RuntimeConfig getRuntimeConfig() {
 
 RuntimeConfig runtimeConfig;
 unsigned long lastSendAt = 0;
+unsigned long telemetrySendCount = 0;
 float simulatedPh = PH_BASE;
+String simulatedPowerSource = "mains";
+int simulatedBackupLevel = 100;
+String simulatedPowerEventAt = "";
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
@@ -63,6 +67,35 @@ float nextSimulatedPh() {
   return simulatedPh;
 }
 
+void maybeSimulatePowerSource() {
+  if (!POWER_SIMULATION_ENABLED) {
+    return;
+  }
+
+  telemetrySendCount++;
+
+  if (telemetrySendCount < POWER_SIMULATION_MIN_SENDS_BETWEEN_EVENTS) {
+    return;
+  }
+
+  if (random(0, 100) >= POWER_SIMULATION_CHANCE_PERCENT) {
+    return;
+  }
+
+  telemetrySendCount = 0;
+  if (simulatedPowerSource == "mains") {
+    simulatedPowerSource = "backup";
+    simulatedBackupLevel = random(POWER_SIMULATION_BACKUP_MIN_LEVEL, POWER_SIMULATION_BACKUP_MAX_LEVEL + 1);
+    simulatedPowerEventAt = isoNow();
+    Serial.printf("[PowerSim] Switching to BACKUP (%d%%)\n", simulatedBackupLevel);
+  } else {
+    simulatedPowerSource = "mains";
+    simulatedBackupLevel = 100;
+    simulatedPowerEventAt = isoNow();
+    Serial.println("[PowerSim] Switching to MAINS");
+  }
+}
+
 bool sendTelemetry() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("[Telemetry] WiFi disconnected, skipping send.");
@@ -84,11 +117,18 @@ bool sendTelemetry() {
   float phValue = nextSimulatedPh();
   String capturedAt = isoNow();
 
+  maybeSimulatePowerSource();
+
   String payload = "{";
   payload += "\"ph\":" + String(phValue, 2) + ",";
   payload += "\"consumo\":0,";
   payload += "\"turbidez\":0,";
   payload += "\"temperatura\":0,";
+  payload += "\"power_source\":\"" + simulatedPowerSource + "\",";
+  payload += "\"backup_level\":" + String(simulatedBackupLevel) + ",";
+  if (simulatedPowerEventAt.length() > 0) {
+    payload += "\"power_event_at\":\"" + simulatedPowerEventAt + "\",";
+  }
   payload += "\"latitude\":" + String(DEMO_LATITUDE, 7) + ",";
   payload += "\"longitude\":" + String(DEMO_LONGITUDE, 7) + ",";
   payload += "\"accuracy_m\":" + String(DEMO_ACCURACY_M) + ",";
@@ -131,6 +171,7 @@ void setup() {
 
   Serial.printf("[Config] API base: %s\n", runtimeConfig.apiBase);
   Serial.printf("[Config] Device identifier: %s\n", DEVICE_IDENTIFIER);
+  Serial.printf("[Config] Power simulation: %s\n", POWER_SIMULATION_ENABLED ? "ENABLED" : "DISABLED");
 
   connectWiFi();
   setupTime();

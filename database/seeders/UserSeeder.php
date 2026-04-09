@@ -12,9 +12,9 @@ class UserSeeder extends Seeder
     {
         // Usuario administrador
         User::updateOrCreate(
-            ['email' => 'admin@aquasene.com'],
+            ['email' => 'admin@example.com'],
             [
-                'name'      => 'Administrador Aquasene',
+                'name'      => 'Administrador AquaSense',
                 'password'  => Hash::make('Admin@1234'),
                 'role'      => 'admin',
                 'is_active' => true,
@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
 
         // Usuario estándar de prueba
         User::updateOrCreate(
-            ['email' => 'usuario@aquasene.com'],
+            ['email' => 'usuario@example.com'],
             [
                 'name'      => 'Usuario Prueba',
                 'password'  => Hash::make('User@1234'),
@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
         );
 
         $this->command->info('✓ Usuarios de prueba creados:');
-        $this->command->line('  admin@aquasene.com  →  Admin@1234  (rol: admin)');
-        $this->command->line('  usuario@aquasene.com  →  User@1234  (rol: user)');
+        $this->command->line('  admin@example.com  →  Admin@1234  (rol: admin)');
+        $this->command->line('  usuario@example.com  →  User@1234  (rol: user)');
     }
 }
