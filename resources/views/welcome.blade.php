@@ -21,6 +21,7 @@
     <script>
         // Web Push VAPID Key
         window.__VAPID_PUBLIC_KEY_ = '{{ config("webpush.vapid_public_key") }}';
+        window.__SURVEY_DEBUG_MODE__ = {{ config('app.survey_debug_mode') ? 'true' : 'false' }};
 
         if ('serviceWorker' in navigator) {
             const swVersion = '{{ substr(md5_file(public_path("sw.js")), 0, 10) }}';
