@@ -27,6 +27,21 @@ function StatusChipNeutral({ active }) {
   return <span className={`aq-state-chip ${active ? "neutral-on" : "neutral-off"}`}>{active ? "activo" : "inactivo"}</span>;
 }
 
+function formatThresholdLabel(entity) {
+  const safeMin = entity?.ph_safe_min;
+  const safeMax = entity?.ph_safe_max;
+  const criticalMin = entity?.ph_critical_min;
+  const criticalMax = entity?.ph_critical_max;
+
+  const hasAny = [safeMin, safeMax, criticalMin, criticalMax].some((value) => value !== null && value !== undefined);
+
+  if (!hasAny) {
+    return "global";
+  }
+
+  return `seguro ${safeMin ?? "?"}-${safeMax ?? "?"} · crítico ${criticalMin ?? "?"}-${criticalMax ?? "?"}`;
+}
+
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -51,6 +66,10 @@ export default function AdminPanel() {
     password: "",
     role: "user",
     is_active: true,
+    ph_safe_min: "",
+    ph_safe_max: "",
+    ph_critical_min: "",
+    ph_critical_max: "",
   });
 
   const [deviceForm, setDeviceForm] = useState({
@@ -63,6 +82,10 @@ export default function AdminPanel() {
     expected_latitude: "",
     expected_longitude: "",
     expected_radius_m: 100,
+    ph_safe_min: "",
+    ph_safe_max: "",
+    ph_critical_min: "",
+    ph_critical_max: "",
   });
 
   const selectedDevice = useMemo(
@@ -129,6 +152,10 @@ export default function AdminPanel() {
       password: "",
       role: "user",
       is_active: true,
+      ph_safe_min: "",
+      ph_safe_max: "",
+      ph_critical_min: "",
+      ph_critical_max: "",
     });
   }
 
@@ -143,6 +170,10 @@ export default function AdminPanel() {
       expected_latitude: "",
       expected_longitude: "",
       expected_radius_m: 100,
+      ph_safe_min: "",
+      ph_safe_max: "",
+      ph_critical_min: "",
+      ph_critical_max: "",
     });
     setZonePickerEnabled(false);
     setPlaceQuery("");
@@ -157,6 +188,10 @@ export default function AdminPanel() {
       password: "",
       role: user.role ?? "user",
       is_active: Boolean(user.is_active),
+      ph_safe_min: user.ph_safe_min ?? "",
+      ph_safe_max: user.ph_safe_max ?? "",
+      ph_critical_min: user.ph_critical_min ?? "",
+      ph_critical_max: user.ph_critical_max ?? "",
     });
   }
 
@@ -167,6 +202,11 @@ export default function AdminPanel() {
       name: device.name ?? "",
       identifier: device.identifier ?? "",
       is_active: Boolean(device.is_active),
+      connectivity_alerts_enabled: Boolean(device.connectivity_alerts_enabled),
+      ph_safe_min: device.ph_safe_min ?? "",
+      ph_safe_max: device.ph_safe_max ?? "",
+      ph_critical_min: device.ph_critical_min ?? "",
+      ph_critical_max: device.ph_critical_max ?? "",
       expected_latitude: device.expected_latitude ?? "",
       expected_longitude: device.expected_longitude ?? "",
       expected_radius_m: device.expected_radius_m ?? 100,
@@ -227,6 +267,10 @@ export default function AdminPanel() {
         email: userForm.email,
         role: userForm.role,
         is_active: userForm.is_active,
+        ph_safe_min: userForm.ph_safe_min === "" ? null : Number(userForm.ph_safe_min),
+        ph_safe_max: userForm.ph_safe_max === "" ? null : Number(userForm.ph_safe_max),
+        ph_critical_min: userForm.ph_critical_min === "" ? null : Number(userForm.ph_critical_min),
+        ph_critical_max: userForm.ph_critical_max === "" ? null : Number(userForm.ph_critical_max),
       };
 
       if (userForm.password.trim()) {
@@ -263,6 +307,10 @@ export default function AdminPanel() {
         identifier: deviceForm.identifier || undefined,
         is_active: deviceForm.is_active,
         connectivity_alerts_enabled: deviceForm.connectivity_alerts_enabled,
+        ph_safe_min: deviceForm.ph_safe_min === "" ? null : Number(deviceForm.ph_safe_min),
+        ph_safe_max: deviceForm.ph_safe_max === "" ? null : Number(deviceForm.ph_safe_max),
+        ph_critical_min: deviceForm.ph_critical_min === "" ? null : Number(deviceForm.ph_critical_min),
+        ph_critical_max: deviceForm.ph_critical_max === "" ? null : Number(deviceForm.ph_critical_max),
         expected_latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
         expected_longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
         expected_radius_m: deviceForm.expected_radius_m ? Number(deviceForm.expected_radius_m) : 100,
@@ -406,6 +454,26 @@ export default function AdminPanel() {
                   <option value="admin">admin</option>
                 </select>
               </div>
+
+              <div>
+                <label className="aq-input-label">pH seguro mínimo</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={userForm.ph_safe_min} onChange={(e) => setUserForm((cur) => ({ ...cur, ph_safe_min: e.target.value }))} placeholder="Global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH seguro máximo</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={userForm.ph_safe_max} onChange={(e) => setUserForm((cur) => ({ ...cur, ph_safe_max: e.target.value }))} placeholder="Global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH crítico mínimo</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={userForm.ph_critical_min} onChange={(e) => setUserForm((cur) => ({ ...cur, ph_critical_min: e.target.value }))} placeholder="Global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH crítico máximo</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={userForm.ph_critical_max} onChange={(e) => setUserForm((cur) => ({ ...cur, ph_critical_max: e.target.value }))} placeholder="Global" />
+              </div>
             </div>
 
             <label className="aq-switch-row">
@@ -426,6 +494,7 @@ export default function AdminPanel() {
                   <th>Usuario</th>
                   <th>Rol</th>
                   <th>Estado</th>
+                  <th>Umbral pH</th>
                   <th>Dispositivos</th>
                   <th></th>
                 </tr>
@@ -439,6 +508,10 @@ export default function AdminPanel() {
                     </td>
                     <td>{user.role}</td>
                     <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
+                    <td>
+                      <strong>{formatThresholdLabel(user)}</strong>
+                      <div className="aq-table-meta">origen: {user.ph_safe_min != null || user.ph_safe_max != null || user.ph_critical_min != null || user.ph_critical_max != null ? "usuario" : "global"}</div>
+                    </td>
                     <td>
                       <strong>{user.devices_count ?? 0}</strong>
                       <div className="aq-table-meta">activos: {user.devices_active_count ?? 0} · inactivos: {user.devices_inactive_count ?? 0}</div>
@@ -510,6 +583,26 @@ export default function AdminPanel() {
                 <label className="aq-input-label">Radio permitido (m)</label>
                 <input className="aq-input" type="number" min="10" max="100000" value={deviceForm.expected_radius_m} onChange={(e) => setDeviceForm((cur) => ({ ...cur, expected_radius_m: e.target.value }))} />
               </div>
+
+              <div>
+                <label className="aq-input-label">pH seguro mínimo (dispositivo)</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={deviceForm.ph_safe_min} onChange={(e) => setDeviceForm((cur) => ({ ...cur, ph_safe_min: e.target.value }))} placeholder="Hereda del usuario/global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH seguro máximo (dispositivo)</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={deviceForm.ph_safe_max} onChange={(e) => setDeviceForm((cur) => ({ ...cur, ph_safe_max: e.target.value }))} placeholder="Hereda del usuario/global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH crítico mínimo (dispositivo)</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={deviceForm.ph_critical_min} onChange={(e) => setDeviceForm((cur) => ({ ...cur, ph_critical_min: e.target.value }))} placeholder="Hereda del usuario/global" />
+              </div>
+
+              <div>
+                <label className="aq-input-label">pH crítico máximo (dispositivo)</label>
+                <input className="aq-input" type="number" min="0" max="14" step="0.01" value={deviceForm.ph_critical_max} onChange={(e) => setDeviceForm((cur) => ({ ...cur, ph_critical_max: e.target.value }))} placeholder="Hereda del usuario/global" />
+              </div>
             </div>
 
             <div className="aq-zone-tools">
@@ -572,6 +665,7 @@ export default function AdminPanel() {
                   <th>Última señal</th>
                   <th>Última posición</th>
                   <th>Conectividad</th>
+                  <th>Umbral pH</th>
                   <th>Asignación</th>
                   <th></th>
                 </tr>
@@ -590,6 +684,12 @@ export default function AdminPanel() {
                       <td>{formatDate(device.last_seen_at)}</td>
                       <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
                       <td><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>
+                      <td>
+                        <strong>{formatThresholdLabel(device)}</strong>
+                        <div className="aq-table-meta">
+                          origen: {device.ph_safe_min != null || device.ph_safe_max != null || device.ph_critical_min != null || device.ph_critical_max != null ? "dispositivo" : (device.user_id ? "usuario/global" : "global")}
+                        </div>
+                      </td>
                       <td><StatusChipNeutral active={Boolean(device.is_active)} /></td>
                       <td>
                         <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
