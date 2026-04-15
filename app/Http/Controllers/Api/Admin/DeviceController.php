@@ -21,6 +21,7 @@ class DeviceController extends Controller
         $devices = Device::query()
             ->with([
                 'user:id,name,email',
+                'city:id,name,department,country,latitude,longitude',
                 'tokens:id,device_id,token_prefix,label,revoked_at,last_used_at,expires_at',
                 'latestLocation' => fn ($query) => $query->select([
                     'device_locations.id',
@@ -58,7 +59,7 @@ class DeviceController extends Controller
 
     public function show(Device $device): JsonResponse
     {
-        $device->load(['user:id,name,email', 'tokens', 'latestLocation']);
+        $device->load(['user:id,name,email', 'city:id,name,department,country,latitude,longitude', 'tokens', 'latestLocation']);
         $device->setAttribute('effective_ph_thresholds', $this->phThresholdResolver->resolve($device));
 
         return response()->json($device);
@@ -68,6 +69,7 @@ class DeviceController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'name' => ['required', 'string', 'max:255'],
             'identifier' => ['nullable', 'string', 'max:255', 'unique:devices,identifier'],
             'is_active' => ['nullable', 'boolean'],
@@ -84,6 +86,7 @@ class DeviceController extends Controller
 
         $device = Device::create([
             'user_id' => $data['user_id'] ?? null,
+            'city_id' => $data['city_id'] ?? null,
             'name' => $data['name'],
             'identifier' => $data['identifier'] ?? Str::uuid()->toString(),
             'is_active' => $data['is_active'] ?? true,
@@ -105,6 +108,7 @@ class DeviceController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'identifier' => ['sometimes', 'string', 'max:255', Rule::unique('devices', 'identifier')->ignore($device->id)],
             'is_active' => ['sometimes', 'boolean'],
@@ -121,6 +125,6 @@ class DeviceController extends Controller
 
         $device->update($data);
 
-        return response()->json($device->fresh(['user', 'tokens']));
+        return response()->json($device->fresh(['user', 'city', 'tokens']));
     }
 }

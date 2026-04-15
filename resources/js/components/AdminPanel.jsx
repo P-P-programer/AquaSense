@@ -106,6 +106,7 @@ function validatePhThresholds({ safeMin, safeMax, criticalMin, criticalMax }) {
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
+  const [cities, setCities] = useState([]);
   const [tokens, setTokens] = useState([]);
   const [deviceLocations, setDeviceLocations] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
@@ -137,6 +138,7 @@ export default function AdminPanel() {
   const [deviceForm, setDeviceForm] = useState({
     id: null,
     user_id: "",
+    city_id: "",
     name: "",
     identifier: "",
     is_active: true,
@@ -188,13 +190,15 @@ export default function AdminPanel() {
     setSuccess("");
 
     try {
-      const [usersData, devicesData] = await Promise.all([
+      const [usersData, devicesData, citiesData] = await Promise.all([
         api.getAdminUsers(),
         api.getAdminDevices(),
+        api.getCities(),
       ]);
 
       setUsers(usersData);
       setDevices(devicesData);
+      setCities(citiesData);
 
       if (selectedDeviceId) {
         const [tokensData, locationsData] = await Promise.all([
@@ -256,6 +260,7 @@ export default function AdminPanel() {
 
   function resetDeviceForm() {
     setDeviceForm({
+      city_id: "",
       id: null,
       user_id: "",
       name: "",
@@ -293,6 +298,7 @@ export default function AdminPanel() {
   function editDevice(device) {
     setDeviceForm({
       id: device.id,
+      city_id: device.city_id ?? "",
       user_id: device.user_id ?? "",
       name: device.name ?? "",
       identifier: device.identifier ?? "",
@@ -426,6 +432,7 @@ export default function AdminPanel() {
     try {
       const payload = {
         user_id: deviceForm.user_id ? Number(deviceForm.user_id) : null,
+        city_id: deviceForm.city_id ? Number(deviceForm.city_id) : null,
         name: deviceForm.name,
         identifier: deviceForm.identifier || undefined,
         is_active: deviceForm.is_active,
@@ -667,6 +674,16 @@ export default function AdminPanel() {
                 </select>
               </div>
               <div>
+                <label className="aq-input-label">Ciudad / Zona</label>
+                <select className="aq-input" value={deviceForm.city_id} onChange={(e) => setDeviceForm((cur) => ({ ...cur, city_id: e.target.value }))}>
+                  <option value="">Sin asignar</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>{city.name} ({city.department})</option>
+                  ))}
+                </select>
+                <div className="aq-table-meta">Base actual: Tolima. Se pueden agregar m&aacute;s departamentos de Colombia desde el seeder de ciudades.</div>
+              </div>
+              <div>
                 <label className="aq-input-label">Nombre</label>
                 <input className="aq-input" value={deviceForm.name} onChange={(e) => setDeviceForm((cur) => ({ ...cur, name: e.target.value }))} required />
               </div>
@@ -786,6 +803,7 @@ export default function AdminPanel() {
                 <tr>
                   <th>Dispositivo</th>
                   <th>Propietario</th>
+                  <th>Ciudad</th>
                   <th>Última señal</th>
                   <th>Última posición</th>
                   <th>Conectividad</th>
@@ -805,6 +823,10 @@ export default function AdminPanel() {
                         <div className="aq-table-meta">{device.identifier}</div>
                       </td>
                       <td>{device.user?.name ?? "Sin asignar"}</td>
+                      <td>
+                        <strong>{device.city?.name ?? "—"}</strong>
+                        {device.city && <div className="aq-table-meta">{device.city.department}</div>}
+                      </td>
                       <td>{formatDate(device.last_seen_at)}</td>
                       <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
                       <td><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>

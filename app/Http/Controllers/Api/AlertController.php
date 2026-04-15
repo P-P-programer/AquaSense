@@ -17,12 +17,14 @@ class AlertController extends Controller
             'status' => ['nullable', 'in:active,resolved'],
             'severity' => ['nullable', 'in:leve,media,alta,critica'],
             'device_id' => ['nullable', 'integer', 'exists:devices,id'],
+            'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
         $query = Alert::query()
             ->with([
-                'device:id,user_id,name,identifier,is_active,last_seen_at',
+                'device:id,user_id,city_id,name,identifier,is_active,last_seen_at',
+                'device.city:id,name,department',
                 'device.user:id,name,email',
             ])
             ->orderByRaw("CASE severity
@@ -49,6 +51,12 @@ class AlertController extends Controller
 
         if (! empty($validated['device_id'])) {
             $query->where('device_id', (int) $validated['device_id']);
+        }
+
+        if (! empty($validated['city_id'])) {
+            $query->whereHas('device', function ($deviceQuery) use ($validated) {
+                $deviceQuery->where('city_id', (int) $validated['city_id']);
+            });
         }
 
         $limit = $validated['limit'] ?? 50;

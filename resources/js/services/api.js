@@ -121,6 +121,15 @@ const api = {
   getConnectivitySettings: (deviceId) => api.get(`/admin/devices/${deviceId}/connectivity-settings`),
   updateConnectivitySettings: (deviceId, payload) => api.patch(`/admin/devices/${deviceId}/connectivity-settings`, payload),
 
+  // Cities and Zones
+  getCities: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.department) query.set("department", params.department);
+    if (params.country) query.set("country", params.country);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return api.get(`/cities${suffix}`);
+  },
+
   geocodeSearch: async (query) => {
     const q = String(query ?? "").trim();
     if (!q) return [];

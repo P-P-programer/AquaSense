@@ -7,19 +7,18 @@ use Illuminate\Database\Seeder;
 
 class CitySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * Note: Currently seeded with Colombian municipalities (Tolima department).
-     * To add more departments:
-     * 1. Use DANE official municipality codes and centroid coordinates.
-     * 2. Create a new seeder (e.g., CundinamarcaCitySeeder) or extend this one.
-     * 3. Keep latitude/longitude precision to 7 decimals (~0.58m accuracy).
-     *
-     * Data sources:
-     * - DANE (Departamento Administrativo Nacional de Estadística)
-     * - Official municipality centroids
-     */
+        /**
+        * Run the database seeds.
+        *
+        * Note: Currently seeded with Colombian municipalities (Tolima department).
+        * To add more departments:
+        * 1. Use official DANE municipality codes and centroid coordinates.
+        * 2. Create a new seeder (e.g., CundinamarcaCitySeeder) or extend this one.
+        * 3. Keep latitude/longitude precision to 7 decimals (~0.58m accuracy).
+        *
+        * This starter list is focused on Tolima to begin operations.
+        * Before production expansion, verify municipality names/codes against current DANE catalogs.
+        */
     public function run(): void
     {
         // Tolima department municipalities (47 municipalities)
@@ -61,7 +60,7 @@ class CitySeeder extends Seeder
             ['name' => 'Prado', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73035, 'latitude' => 4.2514, 'longitude' => -75.0364],
             ['name' => 'Purificación', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73036, 'latitude' => 4.5522, 'longitude' => -75.2153],
             ['name' => 'Rioblanco', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73037, 'latitude' => 3.5889, 'longitude' => -75.4922],
-            ['name' => 'Rionegro', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73038, 'latitude' => 5.1428, 'longitude' => -75.2383],
+            ['name' => 'Villarrica', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73873, 'latitude' => 3.8308, 'longitude' => -74.6525],
             ['name' => 'Roncesvalles', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73039, 'latitude' => 4.7686, 'longitude' => -75.4756],
             ['name' => 'Rovira', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73040, 'latitude' => 4.8597, 'longitude' => -75.2961],
             ['name' => 'Saldaña', 'department' => 'Tolima', 'country' => 'Colombia', 'dane_code' => 73041, 'latitude' => 3.7314, 'longitude' => -74.9464],
