@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\UserAlertPreferenceController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
+use App\Http\Controllers\Api\CityController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -32,6 +33,10 @@ Route::middleware('web')->group(function () {
         Route::patch('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
         Route::get('/me/alert-preferences', [UserAlertPreferenceController::class, 'show']);
         Route::patch('/me/alert-preferences', [UserAlertPreferenceController::class, 'update']);
+
+        // Cities and zones
+        Route::get('/cities', [CityController::class, 'index']);
+        Route::get('/cities/{city}', [CityController::class, 'show']);
 
         // Push Notifications
         Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);

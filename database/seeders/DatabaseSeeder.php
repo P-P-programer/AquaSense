@@ -14,7 +14,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Intencionalmente vacío por ahora.
-        // En este primer commit no se cargan seeders demo.
+        $this->call([
+            CitySeeder::class,
+        ]);
     }
 }

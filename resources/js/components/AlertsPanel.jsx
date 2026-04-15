@@ -18,9 +18,11 @@ function formatDate(value) {
 export default function AlertsPanel() {
   const { isAdmin } = useAuth();
   const [alerts, setAlerts] = useState([]);
+  const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("active");
+  const [cityFilter, setCityFilter] = useState("");
   const [savingId, setSavingId] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [pushPermission, setPushPermission] = useState(
@@ -64,7 +66,11 @@ export default function AlertsPanel() {
     setError(null);
 
     try {
-      const data = await api.getAlerts({ status: statusFilter, limit: 30 });
+      const data = await api.getAlerts({
+        status: statusFilter,
+        city_id: cityFilter || undefined,
+        limit: 30,
+      });
       const nextAlerts = Array.isArray(data) ? data : [];
       setAlerts(nextAlerts);
       setLastUpdatedAt(new Date());
@@ -134,7 +140,13 @@ export default function AlertsPanel() {
 
   useEffect(() => {
     loadAlerts();
-  }, [statusFilter]);
+  }, [statusFilter, cityFilter]);
+
+  useEffect(() => {
+    api.getCities()
+      .then((data) => setCities(Array.isArray(data) ? data : []))
+      .catch(() => setCities([]));
+  }, []);
 
   useEffect(() => {
     api.getPushStatus()
@@ -162,7 +174,7 @@ export default function AlertsPanel() {
     }, 15000);
 
     return () => clearInterval(intervalId);
-  }, [statusFilter]);
+  }, [statusFilter, cityFilter]);
 
   async function resolveAlert(alertId) {
     setSavingId(alertId);
@@ -189,6 +201,16 @@ export default function AlertsPanel() {
           <button type="button" className="aq-btn-secondary" onClick={() => loadAlerts()}>
             Refrescar
           </button>
+          <select
+            className="aq-input"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+          >
+            <option value="">Todas las ciudades</option>
+            {cities.map((city) => (
+              <option key={city.id} value={city.id}>{city.name} ({city.department})</option>
+            ))}
+          </select>
           <select
             className="aq-input"
             value={statusFilter}
@@ -247,6 +269,9 @@ export default function AlertsPanel() {
                 <div className="aq-table-meta">{alert.message}</div>
                 <div className="aq-table-meta">
                   Dispositivo: {alert.device?.name ?? "—"} ({alert.device?.identifier ?? "—"})
+                </div>
+                <div className="aq-table-meta">
+                  Ciudad: {alert.device?.city?.name ?? "Sin ciudad"}
                 </div>
                 <div className="aq-table-meta">
                   Tipo: {alert.type} · Último disparo: {formatDate(alert.last_triggered_at)} · Repeticiones: {alert.triggered_count}
