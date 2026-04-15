@@ -11,6 +11,7 @@ class Device extends Model
 {
     protected $fillable = [
         'user_id',
+        'city_id',
         'name',
         'identifier',
         'is_active',
@@ -58,6 +59,11 @@ class Device extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
     }
 
     public function tokens(): HasMany
