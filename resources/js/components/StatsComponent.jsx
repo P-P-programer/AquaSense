@@ -39,25 +39,6 @@ export default function StatsComponent() {
       )}
 
       <div className="aq-stats-grid">
-
-      <div className="aq-stat-card">
-        <span className="aq-stat-label"><i className="bi bi-droplet"></i> Consumo total</span>
-        <span className="aq-stat-value">{stats.total_consumo?.toLocaleString() ?? "—"}</span>
-        <span className="aq-stat-unit">litros este mes</span>
-        <div className="aq-stat-bar">
-          <div className="aq-stat-bar-fill" style={{ width: "72%" }}></div>
-        </div>
-      </div>
-
-      <div className="aq-stat-card">
-        <span className="aq-stat-label"><i className="bi bi-graph-up"></i> Promedio diario</span>
-        <span className="aq-stat-value">{stats.promedio_diario ?? "—"}</span>
-        <span className="aq-stat-unit">litros / día</span>
-        <div className="aq-stat-bar">
-          <div className="aq-stat-bar-fill" style={{ width: "48%" }}></div>
-        </div>
-      </div>
-
       {/* pH — solo si el backend lo envía */}
       {stats.ph_actual != null && (
         <div className="aq-stat-card">
