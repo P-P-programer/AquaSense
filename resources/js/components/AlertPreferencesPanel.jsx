@@ -8,6 +8,10 @@ export default function AlertPreferencesPanel() {
     alerts_notify_email: true,
     alerts_notify_push: true,
     alerts_min_severity: "media",
+    ph_safe_min: "",
+    ph_safe_max: "",
+    ph_critical_min: "",
+    ph_critical_max: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,7 +32,15 @@ export default function AlertPreferencesPanel() {
     setOkMessage("");
 
     try {
-      const response = await api.updateMyAlertPreferences(form);
+      const payload = {
+        ...form,
+        ph_safe_min: form.ph_safe_min === "" ? null : Number(form.ph_safe_min),
+        ph_safe_max: form.ph_safe_max === "" ? null : Number(form.ph_safe_max),
+        ph_critical_min: form.ph_critical_min === "" ? null : Number(form.ph_critical_min),
+        ph_critical_max: form.ph_critical_max === "" ? null : Number(form.ph_critical_max),
+      };
+
+      const response = await api.updateMyAlertPreferences(payload);
       setForm(response.preferences);
       setOkMessage("Preferencias guardadas.");
     } catch (err) {
@@ -97,6 +109,71 @@ export default function AlertPreferencesPanel() {
             <option value="alta">Alta</option>
             <option value="critica">Crítica</option>
           </select>
+        </div>
+
+        <div className="aq-ph-thresholds-card">
+          <div className="aq-input-label" style={{ marginBottom: "0.55rem" }}>Umbrales de pH personalizados</div>
+          <div className="aq-admin-form-grid">
+            <div>
+              <label className="aq-input-label">pH seguro mínimo</label>
+              <input
+                className="aq-input"
+                type="number"
+                min="0"
+                max="14"
+                step="0.01"
+                value={form.ph_safe_min ?? ""}
+                onChange={(e) => setForm((cur) => ({ ...cur, ph_safe_min: e.target.value }))}
+                placeholder="Ej. 6.5"
+              />
+            </div>
+
+            <div>
+              <label className="aq-input-label">pH seguro máximo</label>
+              <input
+                className="aq-input"
+                type="number"
+                min="0"
+                max="14"
+                step="0.01"
+                value={form.ph_safe_max ?? ""}
+                onChange={(e) => setForm((cur) => ({ ...cur, ph_safe_max: e.target.value }))}
+                placeholder="Ej. 8.0"
+              />
+            </div>
+
+            <div>
+              <label className="aq-input-label">pH crítico mínimo</label>
+              <input
+                className="aq-input"
+                type="number"
+                min="0"
+                max="14"
+                step="0.01"
+                value={form.ph_critical_min ?? ""}
+                onChange={(e) => setForm((cur) => ({ ...cur, ph_critical_min: e.target.value }))}
+                placeholder="Ej. 6.0"
+              />
+            </div>
+
+            <div>
+              <label className="aq-input-label">pH crítico máximo</label>
+              <input
+                className="aq-input"
+                type="number"
+                min="0"
+                max="14"
+                step="0.01"
+                value={form.ph_critical_max ?? ""}
+                onChange={(e) => setForm((cur) => ({ ...cur, ph_critical_max: e.target.value }))}
+                placeholder="Ej. 8.5"
+              />
+            </div>
+          </div>
+
+          <div className="aq-table-meta">
+            Si dejas estos campos vacíos, AquaSense usa la política global del sistema.
+          </div>
         </div>
 
         <div className="aq-admin-actions">

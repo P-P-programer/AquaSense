@@ -578,8 +578,19 @@ body {
   color: var(--texto-secundario);
 }
 
+.aq-ph-thresholds-card {
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: #f8fbff;
+}
+
 .aq-admin-table-wrap {
   overflow-x: auto;
+}
+
+.aq-admin-table td strong {
+  font-size: 0.8rem;
 }
 
 .aq-table-meta {
