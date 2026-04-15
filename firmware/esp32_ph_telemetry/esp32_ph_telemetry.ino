@@ -24,6 +24,33 @@ float simulatedPh = PH_BASE;
 String simulatedPowerSource = "mains";
 int simulatedBackupLevel = 100;
 String simulatedPowerEventAt = "";
+int lastPhRaw = 0;
+float lastPhVoltage = 0.0f;
+
+void setupPhSensor() {
+  analogReadResolution(12);
+  analogSetPinAttenuation(PH_SENSOR_PIN, ADC_11db);
+}
+
+float readPhFromSensor() {
+  long rawSum = 0;
+
+  for (int i = 0; i < PH_SENSOR_SAMPLES; i += 1) {
+    rawSum += analogRead(PH_SENSOR_PIN);
+    delay(5);
+  }
+
+  lastPhRaw = (int)round((float)rawSum / (float)PH_SENSOR_SAMPLES);
+  lastPhVoltage = ((float)lastPhRaw / 4095.0f) * 3.3f;
+
+  // Approximate conversion for E-201-C style modules.
+  float phValue = 7.0f + ((PH_SENSOR_VOLTAGE_AT_PH7 - lastPhVoltage) / PH_SENSOR_VOLTAGE_PER_PH);
+
+  if (phValue < 0.0f) phValue = 0.0f;
+  if (phValue > 14.0f) phValue = 14.0f;
+
+  return phValue;
+}
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
@@ -65,6 +92,14 @@ float nextSimulatedPh() {
   if (simulatedPh > PH_MAX) simulatedPh = PH_MAX;
 
   return simulatedPh;
+}
+
+float getPhValue() {
+  if (PH_SENSOR_ENABLED) {
+    return readPhFromSensor();
+  }
+
+  return nextSimulatedPh();
 }
 
 void maybeSimulatePowerSource() {
@@ -114,13 +149,15 @@ bool sendTelemetry() {
   http.addHeader("Accept", "application/json");
   http.addHeader("X-Device-Token", runtimeConfig.deviceToken);
 
-  float phValue = nextSimulatedPh();
+  float phValue = getPhValue();
   String capturedAt = isoNow();
 
   maybeSimulatePowerSource();
 
   String payload = "{";
   payload += "\"ph\":" + String(phValue, 2) + ",";
+  payload += "\"ph_raw\":" + String(lastPhRaw) + ",";
+  payload += "\"ph_voltage\":" + String(lastPhVoltage, 3) + ",";
   payload += "\"consumo\":0,";
   payload += "\"turbidez\":0,";
   payload += "\"temperatura\":0,";
@@ -146,6 +183,7 @@ bool sendTelemetry() {
   Serial.printf("[Telemetry] POST %s -> %d\n", url.c_str(), statusCode);
   Serial.printf("[Telemetry] Payload: %s\n", payload.c_str());
   Serial.printf("[Telemetry] Response: %s\n", response.c_str());
+  Serial.printf("[pH] raw=%d voltage=%.3fV ph=%.2f\n", lastPhRaw, lastPhVoltage, phValue);
 
   http.end();
 
@@ -162,6 +200,7 @@ void setup() {
 
   randomSeed((unsigned long)esp_random());
   runtimeConfig = getRuntimeConfig();
+  setupPhSensor();
 
 #if ENV_TARGET == ENV_PRODUCTION
   Serial.println("[Config] Environment: PRODUCTION");

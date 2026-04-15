@@ -36,6 +36,18 @@ static const char* DEVICE_TOKEN_PRODUCTION = "AS_PROD_TOKEN_HERE";
 // 20s heartbeat by default.
 static const unsigned long SEND_INTERVAL_MS = 20000UL;
 
+// ---------- pH Sensor ----------
+// D34 on the ESP32 expansion board is used as ADC input for the E-201-C module.
+static const int PH_SENSOR_PIN = 34;
+static const bool PH_SENSOR_ENABLED = true;
+static const int PH_SENSOR_SAMPLES = 10;
+// Demo calibration (without buffer liquids yet):
+// - Keep the probe in neutral/clean water and observe [pH] voltage in serial.
+// - Set that voltage as PH_SENSOR_VOLTAGE_AT_PH7 to center readings near pH 7.
+// - Later, replace these with true calibration from pH 7 and pH 4 buffer solutions.
+static const float PH_SENSOR_VOLTAGE_AT_PH7 = 1.20f;
+static const float PH_SENSOR_VOLTAGE_PER_PH = 0.25f;
+
 // pH simulation: baseline + random drift.
 static const float PH_BASE = 7.0f;
 static const float PH_MIN = 6.2f;
