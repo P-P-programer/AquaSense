@@ -81,7 +81,19 @@ const api = {
   logout: () => api.post("/logout"),
   me: () => api.get("/me"),
   getStats: () => api.get("/stats"),
-  getRegistros: () => api.get("/registros"),
+  getRegistros: (params = {}) => {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.set(key, String(value));
+      }
+    });
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return api.get(`/registros${suffix}`);
+  },
   getAlerts: (params = {}) => {
     const query = new URLSearchParams();
 
