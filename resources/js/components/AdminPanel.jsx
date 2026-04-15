@@ -28,10 +28,11 @@ function StatusChipNeutral({ active }) {
 }
 
 function formatThresholdLabel(entity) {
-  const safeMin = entity?.ph_safe_min;
-  const safeMax = entity?.ph_safe_max;
-  const criticalMin = entity?.ph_critical_min;
-  const criticalMax = entity?.ph_critical_max;
+  const sourceThresholds = entity?.effective_ph_thresholds ?? entity;
+  const safeMin = sourceThresholds?.safe_min ?? sourceThresholds?.ph_safe_min;
+  const safeMax = sourceThresholds?.safe_max ?? sourceThresholds?.ph_safe_max;
+  const criticalMin = sourceThresholds?.critical_min ?? sourceThresholds?.ph_critical_min;
+  const criticalMax = sourceThresholds?.critical_max ?? sourceThresholds?.ph_critical_max;
 
   const hasAny = [safeMin, safeMax, criticalMin, criticalMax].some((value) => value !== null && value !== undefined);
 
@@ -42,6 +43,66 @@ function formatThresholdLabel(entity) {
   return `seguro ${safeMin ?? "?"}-${safeMax ?? "?"} · crítico ${criticalMin ?? "?"}-${criticalMax ?? "?"}`;
 }
 
+function formatThresholdSource(entity, type) {
+  if (entity?.effective_ph_thresholds?.source) {
+    return entity.effective_ph_thresholds.source;
+  }
+
+  const hasOwn =
+    entity?.ph_safe_min != null ||
+    entity?.ph_safe_max != null ||
+    entity?.ph_critical_min != null ||
+    entity?.ph_critical_max != null;
+
+  if (hasOwn) {
+    return type;
+  }
+
+  if (type === "device" && entity?.user_id) {
+    return "usuario/global";
+  }
+
+  return "global";
+}
+
+function parseNullableNumber(value) {
+  return value === "" ? null : Number(value);
+}
+
+function validatePhThresholds({ safeMin, safeMax, criticalMin, criticalMax }) {
+  const values = [
+    { label: "pH seguro mínimo", value: safeMin },
+    { label: "pH seguro máximo", value: safeMax },
+    { label: "pH crítico mínimo", value: criticalMin },
+    { label: "pH crítico máximo", value: criticalMax },
+  ];
+
+  for (const item of values) {
+    if (item.value == null) continue;
+    if (!Number.isFinite(item.value) || item.value < 0 || item.value > 14) {
+      return `${item.label} debe estar entre 0 y 14.`;
+    }
+  }
+
+  if (safeMin != null && safeMax != null && safeMin > safeMax) {
+    return "El pH seguro mínimo no puede ser mayor al pH seguro máximo.";
+  }
+
+  if (criticalMin != null && safeMin != null && criticalMin > safeMin) {
+    return "El pH crítico mínimo no puede ser mayor al pH seguro mínimo.";
+  }
+
+  if (criticalMax != null && safeMax != null && criticalMax < safeMax) {
+    return "El pH crítico máximo no puede ser menor al pH seguro máximo.";
+  }
+
+  if (criticalMin != null && criticalMax != null && criticalMin > criticalMax) {
+    return "El pH crítico mínimo no puede ser mayor al pH crítico máximo.";
+  }
+
+  return null;
+}
+
 export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -50,6 +111,7 @@ export default function AdminPanel() {
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [generatedToken, setGeneratedToken] = useState(null);
   const [zonePickerEnabled, setZonePickerEnabled] = useState(false);
+  const [selectedAuditUserId, setSelectedAuditUserId] = useState(null);
   const [placeQuery, setPlaceQuery] = useState("");
   const [placeResults, setPlaceResults] = useState([]);
   const [searchingPlace, setSearchingPlace] = useState(false);
@@ -92,6 +154,33 @@ export default function AdminPanel() {
     () => devices.find((device) => device.id === selectedDeviceId) ?? null,
     [devices, selectedDeviceId],
   );
+
+  const selectedAuditUser = useMemo(
+    () => users.find((user) => user.id === selectedAuditUserId) ?? null,
+    [users, selectedAuditUserId],
+  );
+
+  const auditDevices = useMemo(
+    () => (selectedAuditUser ? devices.filter((device) => device.user_id === selectedAuditUser.id) : []),
+    [devices, selectedAuditUser],
+  );
+
+  const auditSources = useMemo(() => {
+    return auditDevices.reduce(
+      (acc, device) => {
+        const source = formatThresholdSource(device, "dispositivo");
+        if (source === "device") {
+          acc.device += 1;
+        } else if (source === "user") {
+          acc.user += 1;
+        } else {
+          acc.global += 1;
+        }
+        return acc;
+      },
+      { device: 0, user: 0, global: 0 },
+    );
+  }, [auditDevices]);
 
   async function loadAll() {
     setLoading(true);
@@ -143,6 +232,12 @@ export default function AdminPanel() {
       })
       .catch((err) => setError(err.message ?? "No se pudieron cargar los tokens."));
   }, [selectedDeviceId]);
+
+  useEffect(() => {
+    if (!users.some((user) => user.id === selectedAuditUserId)) {
+      setSelectedAuditUserId(null);
+    }
+  }, [users, selectedAuditUserId]);
 
   function resetUserForm() {
     setUserForm({
@@ -257,6 +352,20 @@ export default function AdminPanel() {
 
   async function submitUser(e) {
     e.preventDefault();
+
+    const thresholds = {
+      safeMin: parseNullableNumber(userForm.ph_safe_min),
+      safeMax: parseNullableNumber(userForm.ph_safe_max),
+      criticalMin: parseNullableNumber(userForm.ph_critical_min),
+      criticalMax: parseNullableNumber(userForm.ph_critical_max),
+    };
+    const validationError = validatePhThresholds(thresholds);
+    if (validationError) {
+      setError(validationError);
+      setSuccess("");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSuccess("");
@@ -267,10 +376,10 @@ export default function AdminPanel() {
         email: userForm.email,
         role: userForm.role,
         is_active: userForm.is_active,
-        ph_safe_min: userForm.ph_safe_min === "" ? null : Number(userForm.ph_safe_min),
-        ph_safe_max: userForm.ph_safe_max === "" ? null : Number(userForm.ph_safe_max),
-        ph_critical_min: userForm.ph_critical_min === "" ? null : Number(userForm.ph_critical_min),
-        ph_critical_max: userForm.ph_critical_max === "" ? null : Number(userForm.ph_critical_max),
+        ph_safe_min: thresholds.safeMin,
+        ph_safe_max: thresholds.safeMax,
+        ph_critical_min: thresholds.criticalMin,
+        ph_critical_max: thresholds.criticalMax,
       };
 
       if (userForm.password.trim()) {
@@ -296,6 +405,20 @@ export default function AdminPanel() {
 
   async function submitDevice(e) {
     e.preventDefault();
+
+    const thresholds = {
+      safeMin: parseNullableNumber(deviceForm.ph_safe_min),
+      safeMax: parseNullableNumber(deviceForm.ph_safe_max),
+      criticalMin: parseNullableNumber(deviceForm.ph_critical_min),
+      criticalMax: parseNullableNumber(deviceForm.ph_critical_max),
+    };
+    const validationError = validatePhThresholds(thresholds);
+    if (validationError) {
+      setError(validationError);
+      setSuccess("");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSuccess("");
@@ -307,10 +430,10 @@ export default function AdminPanel() {
         identifier: deviceForm.identifier || undefined,
         is_active: deviceForm.is_active,
         connectivity_alerts_enabled: deviceForm.connectivity_alerts_enabled,
-        ph_safe_min: deviceForm.ph_safe_min === "" ? null : Number(deviceForm.ph_safe_min),
-        ph_safe_max: deviceForm.ph_safe_max === "" ? null : Number(deviceForm.ph_safe_max),
-        ph_critical_min: deviceForm.ph_critical_min === "" ? null : Number(deviceForm.ph_critical_min),
-        ph_critical_max: deviceForm.ph_critical_max === "" ? null : Number(deviceForm.ph_critical_max),
+        ph_safe_min: thresholds.safeMin,
+        ph_safe_max: thresholds.safeMax,
+        ph_critical_min: thresholds.criticalMin,
+        ph_critical_max: thresholds.criticalMax,
         expected_latitude: deviceForm.expected_latitude === "" ? null : Number(deviceForm.expected_latitude),
         expected_longitude: deviceForm.expected_longitude === "" ? null : Number(deviceForm.expected_longitude),
         expected_radius_m: deviceForm.expected_radius_m ? Number(deviceForm.expected_radius_m) : 100,
@@ -510,7 +633,7 @@ export default function AdminPanel() {
                     <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
                     <td>
                       <strong>{formatThresholdLabel(user)}</strong>
-                      <div className="aq-table-meta">origen: {user.ph_safe_min != null || user.ph_safe_max != null || user.ph_critical_min != null || user.ph_critical_max != null ? "usuario" : "global"}</div>
+                      <div className="aq-table-meta">origen: {formatThresholdSource(user, "usuario")}</div>
                     </td>
                     <td>
                       <strong>{user.devices_count ?? 0}</strong>
@@ -518,6 +641,7 @@ export default function AdminPanel() {
                     </td>
                     <td>
                       <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
+                      <button type="button" className="aq-link-button" onClick={() => setSelectedAuditUserId(user.id)}>Auditar</button>
                     </td>
                   </tr>
                 ))}
@@ -687,7 +811,7 @@ export default function AdminPanel() {
                       <td>
                         <strong>{formatThresholdLabel(device)}</strong>
                         <div className="aq-table-meta">
-                          origen: {device.ph_safe_min != null || device.ph_safe_max != null || device.ph_critical_min != null || device.ph_critical_max != null ? "dispositivo" : (device.user_id ? "usuario/global" : "global")}
+                          origen: {formatThresholdSource(device, "dispositivo")}
                         </div>
                       </td>
                       <td><StatusChipNeutral active={Boolean(device.is_active)} /></td>
@@ -704,6 +828,87 @@ export default function AdminPanel() {
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="aq-admin-card aq-admin-card-wide aq-audit-panel">
+        <div className="aq-admin-token-head">
+          <div>
+            <div className="aq-panel-title"><i className="bi bi-clipboard-data"></i> Auditoría de umbrales pH</div>
+            <div className="aq-table-meta">
+              {selectedAuditUser
+                ? `${selectedAuditUser.name} · ${selectedAuditUser.email}`
+                : "Selecciona un usuario con el botón Auditar para revisar sus umbrales efectivos."}
+            </div>
+          </div>
+          {selectedAuditUser && (
+            <button type="button" className="aq-btn-secondary" onClick={() => setSelectedAuditUserId(null)}>
+              Limpiar auditoría
+            </button>
+          )}
+        </div>
+
+        {selectedAuditUser && (
+          <>
+            <div className="aq-audit-summary-grid">
+              <div className="aq-admin-summary-card">
+                <span>Dispositivos auditados</span>
+                <strong>{auditDevices.length}</strong>
+              </div>
+              <div className="aq-admin-summary-card">
+                <span>Fuente dispositivo</span>
+                <strong>{auditSources.device}</strong>
+              </div>
+              <div className="aq-admin-summary-card">
+                <span>Fuente usuario</span>
+                <strong>{auditSources.user}</strong>
+              </div>
+              <div className="aq-admin-summary-card">
+                <span>Fuente global</span>
+                <strong>{auditSources.global}</strong>
+              </div>
+            </div>
+
+            <div className="aq-audit-user-thresholds">
+              <strong>Preferencia del usuario:</strong> {formatThresholdLabel(selectedAuditUser)}
+              <div className="aq-table-meta">origen: {formatThresholdSource(selectedAuditUser, "usuario")}</div>
+            </div>
+
+            {auditDevices.length > 0 ? (
+              <div className="aq-admin-table-wrap">
+                <table className="aq-table aq-admin-table">
+                  <thead>
+                    <tr>
+                      <th>Dispositivo</th>
+                      <th>Identificador</th>
+                      <th>Umbral efectivo</th>
+                      <th>Origen efectivo</th>
+                      <th>Conectividad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditDevices.map((device) => (
+                      <tr key={`audit-${device.id}`}>
+                        <td><strong>{device.name}</strong></td>
+                        <td>{device.identifier}</td>
+                        <td>{formatThresholdLabel(device)}</td>
+                        <td>{formatThresholdSource(device, "dispositivo")}</td>
+                        <td>
+                          <StatusChip
+                            online={isOnline(device.last_seen_at)}
+                            labelOnline="online"
+                            labelOffline="sin señal"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="aq-table-meta">Este usuario no tiene dispositivos asignados para auditar.</div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="aq-admin-card aq-admin-card-wide">

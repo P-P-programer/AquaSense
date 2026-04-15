@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Device;
+use App\Services\PhThresholdResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -11,6 +12,10 @@ use Illuminate\Validation\Rule;
 
 class DeviceController extends Controller
 {
+    public function __construct(private readonly PhThresholdResolverService $phThresholdResolver)
+    {
+    }
+
     public function index(): JsonResponse
     {
         $devices = Device::query()
@@ -32,6 +37,10 @@ class DeviceController extends Controller
             ->orderBy('name')
             ->get();
 
+        $devices->each(function (Device $device): void {
+            $device->setAttribute('effective_ph_thresholds', $this->phThresholdResolver->resolve($device));
+        });
+
         return response()->json($devices);
     }
 
@@ -50,6 +59,7 @@ class DeviceController extends Controller
     public function show(Device $device): JsonResponse
     {
         $device->load(['user:id,name,email', 'tokens', 'latestLocation']);
+        $device->setAttribute('effective_ph_thresholds', $this->phThresholdResolver->resolve($device));
 
         return response()->json($device);
     }
