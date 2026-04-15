@@ -697,6 +697,25 @@ body {
   gap: 0.2rem 0.5rem;
 }
 
+.aq-audit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.aq-audit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.aq-audit-user-thresholds {
+  border: 1px dashed var(--borde);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 0.8rem;
+}
+
 .aq-token-item {
   border: 1px solid var(--borde);
   border-radius: 12px;
@@ -847,6 +866,7 @@ body {
   .aq-stats-grid { grid-template-columns: 1fr 1fr; }
   .aq-admin-grid { grid-template-columns: 1fr; }
   .aq-admin-form-grid { grid-template-columns: 1fr; }
+  .aq-audit-summary-grid { grid-template-columns: 1fr 1fr; }
   .aq-admin-actions,
   .aq-admin-token-head,
   .aq-admin-token-form,
