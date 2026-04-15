@@ -21,6 +21,10 @@ class User extends Authenticatable
         'alerts_notify_email',
         'alerts_notify_push',
         'alerts_min_severity',
+        'ph_safe_min',
+        'ph_safe_max',
+        'ph_critical_min',
+        'ph_critical_max',
     ];
 
     protected $hidden = [
@@ -36,6 +40,10 @@ class User extends Authenticatable
             'is_active'         => 'boolean',
             'alerts_notify_email' => 'boolean',
             'alerts_notify_push' => 'boolean',
+            'ph_safe_min' => 'float',
+            'ph_safe_max' => 'float',
+            'ph_critical_min' => 'float',
+            'ph_critical_max' => 'float',
         ];
     }
 

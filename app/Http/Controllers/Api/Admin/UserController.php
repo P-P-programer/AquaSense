@@ -47,6 +47,10 @@ class UserController extends Controller
             'alerts_notify_email' => ['nullable', 'boolean'],
             'alerts_notify_push' => ['nullable', 'boolean'],
             'alerts_min_severity' => ['nullable', Rule::in(['leve', 'media', 'alta', 'critica'])],
+            'ph_safe_min' => ['nullable', 'numeric', 'between:0,14'],
+            'ph_safe_max' => ['nullable', 'numeric', 'between:0,14'],
+            'ph_critical_min' => ['nullable', 'numeric', 'between:0,14'],
+            'ph_critical_max' => ['nullable', 'numeric', 'between:0,14'],
         ]);
 
         $user = User::create([
@@ -58,6 +62,10 @@ class UserController extends Controller
             'alerts_notify_email' => $data['alerts_notify_email'] ?? true,
             'alerts_notify_push' => $data['alerts_notify_push'] ?? true,
             'alerts_min_severity' => $data['alerts_min_severity'] ?? 'media',
+            'ph_safe_min' => $data['ph_safe_min'] ?? null,
+            'ph_safe_max' => $data['ph_safe_max'] ?? null,
+            'ph_critical_min' => $data['ph_critical_min'] ?? null,
+            'ph_critical_max' => $data['ph_critical_max'] ?? null,
         ]);
 
         return response()->json($user, 201);
@@ -74,6 +82,10 @@ class UserController extends Controller
             'alerts_notify_email' => ['sometimes', 'boolean'],
             'alerts_notify_push' => ['sometimes', 'boolean'],
             'alerts_min_severity' => ['sometimes', Rule::in(['leve', 'media', 'alta', 'critica'])],
+            'ph_safe_min' => ['sometimes', 'nullable', 'numeric', 'between:0,14'],
+            'ph_safe_max' => ['sometimes', 'nullable', 'numeric', 'between:0,14'],
+            'ph_critical_min' => ['sometimes', 'nullable', 'numeric', 'between:0,14'],
+            'ph_critical_max' => ['sometimes', 'nullable', 'numeric', 'between:0,14'],
         ]);
 
         if (array_key_exists('password', $data) && $data['password'] === null) {

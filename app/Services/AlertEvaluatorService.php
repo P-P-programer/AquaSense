@@ -9,7 +9,10 @@ use Carbon\CarbonInterface;
 
 class AlertEvaluatorService
 {
-    public function __construct(private readonly AlertNotificationService $alertNotificationService)
+    public function __construct(
+        private readonly AlertNotificationService $alertNotificationService,
+        private readonly PhThresholdResolverService $phThresholdResolver,
+    )
     {
     }
 
@@ -60,8 +63,10 @@ class AlertEvaluatorService
         }
 
         $ph = (float) $registro->ph;
-        $isCritical = $ph < 6.0 || $ph > 8.5;
-        $isOutOfRange = $ph < 6.5 || $ph > 8.0;
+        $thresholds = $this->phThresholdResolver->resolve($device);
+
+        $isCritical = $ph < $thresholds['critical_min'] || $ph > $thresholds['critical_max'];
+        $isOutOfRange = $ph < $thresholds['safe_min'] || $ph > $thresholds['safe_max'];
 
         if (! $isOutOfRange) {
             $this->resolveAlert($device, 'ph_out_of_range');
@@ -80,10 +85,11 @@ class AlertEvaluatorService
             [
                 'ph' => $ph,
                 'thresholds' => [
-                    'safe_min' => 6.5,
-                    'safe_max' => 8.0,
-                    'critical_min' => 6.0,
-                    'critical_max' => 8.5,
+                    'safe_min' => $thresholds['safe_min'],
+                    'safe_max' => $thresholds['safe_max'],
+                    'critical_min' => $thresholds['critical_min'],
+                    'critical_max' => $thresholds['critical_max'],
+                    'source' => $thresholds['source'],
                 ],
                 'registro_id' => $registro->id,
                 'captured_at' => optional($registro->captured_at)->toISOString(),
