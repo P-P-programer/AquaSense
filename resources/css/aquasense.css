@@ -51,7 +51,7 @@ body {
   box-shadow: 0 10px 30px rgba(13, 43, 85, 0.2);
   display: flex;
   flex-direction: column;
-  z-index: 25;
+  z-index: 1400;
 }
 
 .aq-sidebar-brand {
@@ -142,7 +142,7 @@ body {
 .aq-topbar-shell {
   position: sticky;
   top: 0;
-  z-index: 15;
+  z-index: 1200;
   min-height: 76px;
   padding: calc(0.8rem + env(safe-area-inset-top)) 1.3rem 0.85rem;
   border-bottom: 1px solid #d4e4f9;
@@ -190,6 +190,26 @@ body {
   letter-spacing: 0.03em;
 }
 
+.aq-topbar-icon-hint {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+}
+
+.aq-topbar-icon-hint.aq-notify-trigger {
+  padding-right: 0;
+}
+
+.aq-topbar-icon-hint.aq-notify-trigger .aq-notify-badge {
+  right: -6px;
+  top: -5px;
+}
+
+.aq-menu-trigger {
+  display: none;
+}
+
 .aq-page-title-icon {
   display: inline-flex;
   align-items: center;
@@ -203,6 +223,14 @@ body {
 
 .aq-notify-trigger {
   position: relative;
+}
+
+.aq-notify-svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--azul-profundo);
+  display: block;
+  flex-shrink: 0;
 }
 
 .aq-notify-badge {
@@ -221,6 +249,7 @@ body {
   font-size: 0.65rem;
   font-weight: 700;
   font-family: 'IBM Plex Mono', monospace;
+  z-index: 2;
 }
 
 .aq-notify-badge.is-critical {
@@ -791,6 +820,17 @@ body {
   font-size: 0.8rem;
 }
 
+.aq-admin-table {
+  table-layout: fixed;
+}
+
+.aq-admin-table th,
+.aq-admin-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .aq-admin-table td[data-label="Acciones"] {
   display: flex;
   gap: 0.25rem;
@@ -978,14 +1018,24 @@ body {
 /* ── Mapa Leaflet ────────────────────────────── */
 .aq-map-container {
   position: relative;
+  z-index: 1;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--sombra);
 }
 
 .aq-map {
+  position: relative;
+  z-index: 1;
   border-radius: 12px;
   background: var(--azul-claro);
+}
+
+.aq-map-container .leaflet-pane,
+.aq-map-container .leaflet-top,
+.aq-map-container .leaflet-bottom,
+.aq-map-container .leaflet-control {
+  z-index: 200;
 }
 
 /* Personalizar popups de Leaflet */
@@ -1063,7 +1113,7 @@ body {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 1180px) {
+@media (max-width: 1400px) {
   .aq-admin-table-responsive thead {
     display: none;
   }
@@ -1115,6 +1165,29 @@ body {
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 768px) {
+  .aq-menu-trigger {
+    display: inline-flex;
+  }
+
+  .aq-topbar-icon-hint {
+    width: auto;
+    min-height: 40px;
+    padding: 0 0.65rem;
+  }
+
+  .aq-topbar-icon-hint .aq-topbar-icon-label {
+    display: inline;
+  }
+
+  .aq-topbar-icon-hint.aq-notify-trigger {
+    padding-right: 1.2rem;
+  }
+
+  .aq-topbar-icon-hint.aq-notify-trigger .aq-notify-badge {
+    right: -5px;
+    top: -4px;
+  }
+
   .aq-sidebar {
     transform: translateX(-106%);
     transition: transform 0.22s ease;
@@ -1130,7 +1203,7 @@ body {
     inset: 0;
     border: none;
     background: rgba(15, 23, 42, 0.4);
-    z-index: 20;
+    z-index: 1300;
   }
 
   .aq-main-shell {
@@ -1152,25 +1225,6 @@ body {
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
-  }
-
-  .aq-topbar-icon-hint {
-    width: auto;
-    min-height: 40px;
-    padding: 0 0.65rem;
-  }
-
-  .aq-topbar-icon-hint .aq-topbar-icon-label {
-    display: inline;
-  }
-
-  .aq-topbar-icon-hint.aq-notify-trigger {
-    padding-right: 1.2rem;
-  }
-
-  .aq-topbar-icon-hint.aq-notify-trigger .aq-notify-badge {
-    right: -5px;
-    top: -4px;
   }
 
   .aq-status-pill {
