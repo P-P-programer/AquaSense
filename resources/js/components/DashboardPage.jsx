@@ -201,7 +201,7 @@ export default function DashboardPage() {
       <div className="aq-main-shell">
         <header className="aq-topbar-shell">
           <div className="aq-topbar-left">
-            <button type="button" className="aq-topbar-icon aq-topbar-icon-hint" onClick={() => setSidebarOpen((prev) => !prev)} aria-label="Abrir navegación">
+            <button type="button" className="aq-topbar-icon aq-topbar-icon-hint aq-menu-trigger" onClick={() => setSidebarOpen((prev) => !prev)} aria-label="Abrir navegación">
               <i className="bi bi-list"></i>
               <span className="aq-topbar-icon-label">Menú</span>
             </button>
@@ -221,7 +221,9 @@ export default function DashboardPage() {
             </div>
 
             <button type="button" className="aq-topbar-icon aq-topbar-icon-hint aq-notify-trigger" onClick={() => setNotifyOpen((prev) => !prev)} aria-label="Notificaciones">
-              <i className="bi bi-bell"></i>
+              <svg className="aq-notify-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 3a6 6 0 0 0-6 6v3.4L4.3 15a1 1 0 0 0 .7 1.7h14a1 1 0 0 0 .7-1.7L18 12.4V9a6 6 0 0 0-6-6Zm0 19a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Z" />
+              </svg>
               <span className="aq-topbar-icon-label">Notificaciones</span>
               <span className={`aq-notify-badge ${criticalCount > 0 ? "is-critical" : ""}`}>{alerts.length}</span>
             </button>
