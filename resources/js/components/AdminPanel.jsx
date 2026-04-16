@@ -618,7 +618,7 @@ export default function AdminPanel() {
           </form>
 
           <div className="aq-admin-table-wrap">
-            <table className="aq-table aq-admin-table">
+            <table className="aq-table aq-admin-table aq-admin-table-responsive">
               <thead>
                 <tr>
                   <th>Usuario</th>
@@ -632,21 +632,21 @@ export default function AdminPanel() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td>
+                    <td data-label="Usuario">
                       <strong>{user.name}</strong>
                       <div className="aq-table-meta">{user.email}</div>
                     </td>
-                    <td>{user.role}</td>
-                    <td><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
-                    <td>
+                    <td data-label="Rol">{user.role}</td>
+                    <td data-label="Estado"><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
+                    <td data-label="Umbral pH">
                       <strong>{formatThresholdLabel(user)}</strong>
                       <div className="aq-table-meta">origen: {formatThresholdSource(user, "usuario")}</div>
                     </td>
-                    <td>
+                    <td data-label="Dispositivos">
                       <strong>{user.devices_count ?? 0}</strong>
                       <div className="aq-table-meta">activos: {user.devices_active_count ?? 0} · inactivos: {user.devices_inactive_count ?? 0}</div>
                     </td>
-                    <td>
+                    <td data-label="Acciones">
                       <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
                       <button type="button" className="aq-link-button" onClick={() => setSelectedAuditUserId(user.id)}>Auditar</button>
                     </td>
@@ -798,7 +798,7 @@ export default function AdminPanel() {
           </form>
 
           <div className="aq-admin-table-wrap">
-            <table className="aq-table aq-admin-table">
+            <table className="aq-table aq-admin-table aq-admin-table-responsive">
               <thead>
                 <tr>
                   <th>Dispositivo</th>
@@ -818,26 +818,26 @@ export default function AdminPanel() {
 
                   return (
                     <tr key={device.id} className={selectedDeviceId === device.id ? "is-selected" : ""}>
-                      <td>
+                      <td data-label="Dispositivo">
                         <strong>{device.name}</strong>
                         <div className="aq-table-meta">{device.identifier}</div>
                       </td>
-                      <td>{device.user?.name ?? "Sin asignar"}</td>
-                      <td>
+                      <td data-label="Propietario">{device.user?.name ?? "Sin asignar"}</td>
+                      <td data-label="Ciudad">
                         <strong>{device.city?.name ?? "—"}</strong>
                         {device.city && <div className="aq-table-meta">{device.city.department}</div>}
                       </td>
-                      <td>{formatDate(device.last_seen_at)}</td>
-                      <td>{formatCoords(device.last_latitude, device.last_longitude)}</td>
-                      <td><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>
-                      <td>
+                      <td data-label="Última señal">{formatDate(device.last_seen_at)}</td>
+                      <td data-label="Última posición">{formatCoords(device.last_latitude, device.last_longitude)}</td>
+                      <td data-label="Conectividad"><StatusChip online={online} labelOnline="online" labelOffline="sin señal" /></td>
+                      <td data-label="Umbral pH">
                         <strong>{formatThresholdLabel(device)}</strong>
                         <div className="aq-table-meta">
                           origen: {formatThresholdSource(device, "dispositivo")}
                         </div>
                       </td>
-                      <td><StatusChipNeutral active={Boolean(device.is_active)} /></td>
-                      <td>
+                      <td data-label="Asignación"><StatusChipNeutral active={Boolean(device.is_active)} /></td>
+                      <td data-label="Acciones">
                         <button type="button" className="aq-link-button" onClick={() => editDevice(device)}>Editar</button>
                         <button type="button" className="aq-link-button" onClick={() => setSelectedDeviceId(device.id)}>
                           Tokens
@@ -897,7 +897,7 @@ export default function AdminPanel() {
 
             {auditDevices.length > 0 ? (
               <div className="aq-admin-table-wrap">
-                <table className="aq-table aq-admin-table">
+                <table className="aq-table aq-admin-table aq-admin-table-responsive">
                   <thead>
                     <tr>
                       <th>Dispositivo</th>
@@ -910,11 +910,11 @@ export default function AdminPanel() {
                   <tbody>
                     {auditDevices.map((device) => (
                       <tr key={`audit-${device.id}`}>
-                        <td><strong>{device.name}</strong></td>
-                        <td>{device.identifier}</td>
-                        <td>{formatThresholdLabel(device)}</td>
-                        <td>{formatThresholdSource(device, "dispositivo")}</td>
-                        <td>
+                        <td data-label="Dispositivo"><strong>{device.name}</strong></td>
+                        <td data-label="Identificador">{device.identifier}</td>
+                        <td data-label="Umbral efectivo">{formatThresholdLabel(device)}</td>
+                        <td data-label="Origen efectivo">{formatThresholdSource(device, "dispositivo")}</td>
+                        <td data-label="Conectividad">
                           <StatusChip
                             online={isOnline(device.last_seen_at)}
                             labelOnline="online"
