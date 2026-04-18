@@ -141,7 +141,7 @@ export default function TableComponent() {
           No hay lecturas para el filtro actual. Puedes cambiar la ciudad o escribir otra opción sin perder los controles.
         </div>
       ) : (
-        <table className="aq-table">
+        <table className="aq-table aq-registros-table">
           <thead>
             <tr>
               <th>Fecha y hora</th>
@@ -155,12 +155,12 @@ export default function TableComponent() {
           <tbody>
             {data.map((r, i) => (
               <tr key={i}>
-                <td>{r.fecha}</td>
-                <td>{r.city_name ?? "Sin ciudad"}</td>
-                <td>{r.device_name ?? "—"}</td>
-                <td>{r.ph ?? "—"}</td>
-                <td>{r.turbidez != null ? `${r.turbidez} NTU` : "—"}</td>
-                <td>
+                <td data-label="Fecha y hora">{r.fecha}</td>
+                <td data-label="Ciudad">{r.city_name ?? "Sin ciudad"}</td>
+                <td data-label="Dispositivo">{r.device_name ?? "—"}</td>
+                <td data-label="pH">{r.ph ?? "—"}</td>
+                <td data-label="Turbidez">{r.turbidez != null ? `${r.turbidez} NTU` : "—"}</td>
+                <td data-label="Estado">
                   <span className={`aq-badge ${r.estado ?? "ok"}`}>
                     {estadoLabel[r.estado] ?? "Normal"}
                   </span>
