@@ -162,6 +162,12 @@ export default function DashboardPage() {
   const criticalCount = alerts.filter((alert) => alert.severity === "critica").length;
   const currentMeta = SECTION_META[activeSection] ?? SECTION_META.overview;
 
+  async function handleLogout() {
+    const confirmed = window.confirm("¿Seguro que deseas cerrar sesión?");
+    if (!confirmed) return;
+    await logout();
+  }
+
   return (
     <div className="aq-shell">
       <aside className={`aq-sidebar ${sidebarOpen ? "is-open" : ""}`}>
@@ -238,7 +244,7 @@ export default function DashboardPage() {
               resolvingId={resolvingAlertId}
             />
 
-            <button type="button" className="aq-btn-secondary" onClick={logout}>
+            <button type="button" className="aq-btn-secondary" onClick={handleLogout}>
               <i className="bi bi-box-arrow-right"></i> Salir
             </button>
           </div>

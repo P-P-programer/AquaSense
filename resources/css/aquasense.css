@@ -322,9 +322,13 @@ body {
 
 .aq-overview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 0.9rem;
+}
+
+.aq-overview-grid > * {
+  min-width: 0;
 }
 
 .aq-sidebar-backdrop {
@@ -555,6 +559,7 @@ body {
   padding: 1.4rem;
   box-shadow: var(--sombra);
   margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .aq-panel-title {
@@ -602,6 +607,44 @@ body {
   background: var(--azul-claro);
 }
 
+.aq-registros-table {
+  table-layout: fixed;
+}
+
+.aq-registros-table th,
+.aq-registros-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-registros-table th:nth-child(1),
+.aq-registros-table td:nth-child(1) { width: 24%; }
+
+.aq-registros-table th:nth-child(2),
+.aq-registros-table td:nth-child(2) { width: 17%; }
+
+.aq-registros-table th:nth-child(3),
+.aq-registros-table td:nth-child(3) { width: 21%; }
+
+.aq-registros-table th:nth-child(4),
+.aq-registros-table td:nth-child(4) {
+  width: 10%;
+  text-align: center;
+}
+
+.aq-registros-table th:nth-child(5),
+.aq-registros-table td:nth-child(5) {
+  width: 14%;
+  text-align: center;
+}
+
+.aq-registros-table th:nth-child(6),
+.aq-registros-table td:nth-child(6) {
+  width: 14%;
+  text-align: center;
+}
+
 /* ── Badge estado ────────────────────────── */
 .aq-badge {
   padding: 2px 8px;
@@ -613,6 +656,61 @@ body {
 .aq-badge.ok     { background: #d1fae5; color: #065f46; }
 .aq-badge.warn   { background: #fef3c7; color: #92400e; }
 .aq-badge.danger { background: #fee2e2; color: #991b1b; }
+
+/* ── Chart (pH) ─────────────────────────── */
+.aq-linechart-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.aq-linechart-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.aq-linechart-chip {
+  border: 1px solid var(--borde);
+  background: #f7fbff;
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  min-width: 0;
+}
+
+.aq-linechart-chip span {
+  display: block;
+  color: var(--texto-secundario);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.aq-linechart-chip strong {
+  display: block;
+  color: var(--azul-profundo);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.aq-linechart-chip-safe {
+  background: #f1fdf8;
+  border-color: #b7ebd0;
+}
+
+.aq-linechart-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 280px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef7ff 100%);
+  border: 1px solid var(--borde);
+  overflow: hidden;
+}
 
 /* ── Loading ─────────────────────────────── */
 .aq-loading {
@@ -984,6 +1082,18 @@ body {
   min-width: 145px;
 }
 
+.aq-alerts-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.aq-alerts-filters > * {
+  min-width: 0;
+}
+
 .aq-alert-item {
   align-items: flex-start;
 }
@@ -1241,8 +1351,50 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .aq-registros-table thead {
+    display: none;
+  }
+
+  .aq-registros-table,
+  .aq-registros-table tbody,
+  .aq-registros-table tr,
+  .aq-registros-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .aq-registros-table tr {
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    margin-bottom: 0.65rem;
+    background: #f8fbff;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .aq-registros-table td {
+    border-bottom: 1px dashed #d8e7f8;
+    padding: 0.5rem 0.35rem;
+  }
+
+  .aq-registros-table td:last-child {
+    border-bottom: none;
+  }
+
+  .aq-registros-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--texto-secundario);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
   .aq-welcome-icons { flex-direction: column; gap: 1rem; }
   .aq-stats-grid { grid-template-columns: 1fr 1fr; }
+  .aq-linechart-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aq-linechart-canvas { height: 250px; }
   .aq-admin-grid { grid-template-columns: 1fr; }
   .aq-admin-form-grid { grid-template-columns: 1fr; }
   .aq-audit-summary-grid { grid-template-columns: 1fr 1fr; }
@@ -1250,4 +1402,8 @@ body {
   .aq-admin-token-head,
   .aq-admin-token-form,
   .aq-token-item { flex-direction: column; align-items: stretch; }
+
+  .aq-linechart-meta {
+    grid-template-columns: 1fr;
+  }
 }
