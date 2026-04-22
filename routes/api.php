@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\Api\CityController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -42,6 +44,34 @@ Route::middleware('web')->group(function () {
         Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
         Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
         Route::get('/push/status', [PushSubscriptionController::class, 'status']);
+
+        // Email Verification
+        Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+            if (! $request->user()->hasVerifiedEmail()) {
+                $request->fulfill();
+            }
+
+            return response()->json([
+                'message' => 'Correo verificado correctamente.',
+                'verified' => true,
+            ]);
+        })->middleware('signed')->name('verification.verify');
+
+        Route::post('/email/verification-notification', function (Request $request) {
+            if ($request->user()->hasVerifiedEmail()) {
+                return response()->json([
+                    'message' => 'El correo ya está verificado.',
+                    'verified' => true,
+                ]);
+            }
+
+            $request->user()->sendEmailVerificationNotification();
+
+            return response()->json([
+                'message' => 'Correo de verificación reenviado.',
+                'verified' => false,
+            ]);
+        })->middleware('throttle:6,1')->name('verification.send');
     });
 
     Route::middleware(['auth', 'role:admin'])->group(function () {
