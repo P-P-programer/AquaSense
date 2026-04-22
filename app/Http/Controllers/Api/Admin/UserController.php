@@ -58,7 +58,8 @@ class UserController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'role' => $data['role'],
-            'is_active' => $data['is_active'] ?? true,
+            // Sprint 3: los usuarios nuevos inician pendientes hasta verificar correo y activación admin.
+            'is_active' => false,
             'alerts_notify_email' => $data['alerts_notify_email'] ?? true,
             'alerts_notify_push' => $data['alerts_notify_push'] ?? true,
             'alerts_min_severity' => $data['alerts_min_severity'] ?? 'media',
@@ -67,6 +68,8 @@ class UserController extends Controller
             'ph_critical_min' => $data['ph_critical_min'] ?? null,
             'ph_critical_max' => $data['ph_critical_max'] ?? null,
         ]);
+
+        $user->sendEmailVerificationNotification();
 
         return response()->json($user, 201);
     }
