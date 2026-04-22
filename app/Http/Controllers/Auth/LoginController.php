@@ -43,7 +43,7 @@ class LoginController extends Controller
         if (! $user) {
             return back()
                 ->withInput($request->only('email', 'remember'))
-                ->withErrors(['email' => 'Las credenciales no son correctas o la cuenta está inactiva.']);
+                ->withErrors(['email' => 'Las credenciales no son correctas, la cuenta está inactiva o el correo no ha sido verificado.']);
         }
 
         // Regenerar sesión para prevenir session fixation
@@ -81,7 +81,7 @@ class LoginController extends Controller
 
         if (! $user) {
             return response()->json([
-                'message' => 'Las credenciales no son correctas o la cuenta está inactiva.',
+                'message' => 'Las credenciales no son correctas, la cuenta está inactiva o el correo no ha sido verificado.',
             ], 401);
         }
 

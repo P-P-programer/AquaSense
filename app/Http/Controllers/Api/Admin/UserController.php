@@ -22,6 +22,8 @@ class UserController extends Controller
             ->orderBy('name')
             ->get();
 
+        $users->each(fn (User $user) => $user->setAttribute('verification_status', $this->resolveVerificationStatus($user)));
+
         return response()->json($users);
     }
 
@@ -32,6 +34,8 @@ class UserController extends Controller
             'devices as devices_active_count' => fn ($q) => $q->where('is_active', true),
             'devices as devices_inactive_count' => fn ($q) => $q->where('is_active', false),
         ]);
+
+        $user->setAttribute('verification_status', $this->resolveVerificationStatus($user));
 
         return response()->json($user);
     }
@@ -71,6 +75,8 @@ class UserController extends Controller
 
         $user->sendEmailVerificationNotification();
 
+        $user->setAttribute('verification_status', $this->resolveVerificationStatus($user));
+
         return response()->json($user, 201);
     }
 
@@ -101,6 +107,22 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return response()->json($user->fresh());
+        $freshUser = $user->fresh();
+        $freshUser->setAttribute('verification_status', $this->resolveVerificationStatus($freshUser));
+
+        return response()->json($freshUser);
+    }
+
+    private function resolveVerificationStatus(User $user): string
+    {
+        if (! $user->hasVerifiedEmail()) {
+            return 'pendiente';
+        }
+
+        if ($user->is_active) {
+            return 'activo';
+        }
+
+        return 'verificado';
     }
 }

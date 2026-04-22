@@ -26,25 +26,9 @@ Route::middleware('web')->group(function () {
 
     Route::get('/me', function () {
         return response()->json(auth()->user());
-    })->name('api.me');
+    })->middleware(['auth', 'verified'])->name('api.me');
 
     Route::middleware('auth')->group(function () {
-        Route::get('/stats', [StatsController::class, 'index']);
-        Route::get('/registros', [RegistrosController::class, 'index']);
-        Route::get('/alerts', [AlertController::class, 'index']);
-        Route::patch('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
-        Route::get('/me/alert-preferences', [UserAlertPreferenceController::class, 'show']);
-        Route::patch('/me/alert-preferences', [UserAlertPreferenceController::class, 'update']);
-
-        // Cities and zones
-        Route::get('/cities', [CityController::class, 'index']);
-        Route::get('/cities/{city}', [CityController::class, 'show']);
-
-        // Push Notifications
-        Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
-        Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
-        Route::get('/push/status', [PushSubscriptionController::class, 'status']);
-
         // Email Verification
         Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
             if (! $request->user()->hasVerifiedEmail()) {
@@ -74,7 +58,25 @@ Route::middleware('web')->group(function () {
         })->middleware('throttle:6,1')->name('verification.send');
     });
 
-    Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::get('/stats', [StatsController::class, 'index']);
+        Route::get('/registros', [RegistrosController::class, 'index']);
+        Route::get('/alerts', [AlertController::class, 'index']);
+        Route::patch('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
+        Route::get('/me/alert-preferences', [UserAlertPreferenceController::class, 'show']);
+        Route::patch('/me/alert-preferences', [UserAlertPreferenceController::class, 'update']);
+
+        // Cities and zones
+        Route::get('/cities', [CityController::class, 'index']);
+        Route::get('/cities/{city}', [CityController::class, 'show']);
+
+        // Push Notifications
+        Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
+        Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
+        Route::get('/push/status', [PushSubscriptionController::class, 'status']);
+    });
+
+    Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
         Route::get('/admin/users', [UserController::class, 'index']);
         Route::post('/admin/users', [UserController::class, 'store']);
         Route::get('/admin/users/{user}', [UserController::class, 'show']);
