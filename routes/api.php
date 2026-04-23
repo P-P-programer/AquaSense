@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\UserAlertPreferenceController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
+use App\Http\Controllers\Api\RfidAccessController;
 use App\Http\Controllers\Api\CityController;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
@@ -114,3 +115,7 @@ Route::middleware('web')->group(function () {
 Route::post('/devices/ingest', [DeviceIngestController::class, 'store'])
     ->middleware('throttle:120,1')
     ->name('api.devices.ingest');
+
+Route::post('/access/rfid/validate', [RfidAccessController::class, 'validate'])
+    ->middleware('throttle:60,1')
+    ->name('access.rfid.validate');
