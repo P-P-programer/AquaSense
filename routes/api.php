@@ -12,7 +12,8 @@ use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\Api\CityController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Models\User;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -24,39 +25,51 @@ Route::middleware('web')->group(function () {
     Route::post('/logout', [LoginController::class, 'apiLogout'])
         ->name('api.logout');
 
+    // Email Verification (public signed link + resend by email)
+    Route::get('/email/verify/{id}/{hash}', function (Request $request, int $id, string $hash) {
+        $user = User::findOrFail($id);
+
+        if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+            return response()->json([
+                'message' => 'El enlace de verificación no es válido.',
+            ], 403);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
+        }
+
+        return response()->json([
+            'message' => 'Correo verificado correctamente. Ya puedes iniciar sesión cuando el administrador active tu cuenta.',
+            'verified' => true,
+        ]);
+    })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+
+    Route::post('/email/verification-notification', function (Request $request) {
+        $user = $request->user();
+
+        if (! $user) {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+            ]);
+
+            $user = User::where('email', $data['email'])->first();
+        }
+
+        if ($user && ! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
+
+        return response()->json([
+            'message' => 'Si la cuenta existe y está pendiente, enviamos un nuevo correo de verificación.',
+            'resent' => true,
+        ]);
+    })->middleware('throttle:6,1')->name('verification.send');
+
     Route::get('/me', function () {
         return response()->json(auth()->user());
     })->middleware(['auth', 'verified'])->name('api.me');
-
-    Route::middleware('auth')->group(function () {
-        // Email Verification
-        Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-            if (! $request->user()->hasVerifiedEmail()) {
-                $request->fulfill();
-            }
-
-            return response()->json([
-                'message' => 'Correo verificado correctamente.',
-                'verified' => true,
-            ]);
-        })->middleware('signed')->name('verification.verify');
-
-        Route::post('/email/verification-notification', function (Request $request) {
-            if ($request->user()->hasVerifiedEmail()) {
-                return response()->json([
-                    'message' => 'El correo ya está verificado.',
-                    'verified' => true,
-                ]);
-            }
-
-            $request->user()->sendEmailVerificationNotification();
-
-            return response()->json([
-                'message' => 'Correo de verificación reenviado.',
-                'verified' => false,
-            ]);
-        })->middleware('throttle:6,1')->name('verification.send');
-    });
 
     Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/stats', [StatsController::class, 'index']);

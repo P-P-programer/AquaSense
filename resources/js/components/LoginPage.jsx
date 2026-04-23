@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -9,20 +10,105 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [error,    setError]    = useState(null);
   const [loading,  setLoading]  = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   async function handleLogin(e) {
     e.preventDefault();
     setError(null);
+    setResendMessage("");
     setLoading(true);
 
     try {
       await login(email, password, remember);
       // El AuthContext actualiza `user` → App.jsx redirige al dashboard automáticamente
     } catch (err) {
-      setError(err.message ?? "Credenciales incorrectas o cuenta inactiva.");
+      if (err?.status === 403 && err?.data?.code === "email_not_verified") {
+        setPendingEmail(err?.data?.email || email);
+      } else {
+        setError(err.message ?? "Credenciales incorrectas o cuenta inactiva.");
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleResendVerification() {
+    if (!pendingEmail) return;
+
+    setError(null);
+    setResendMessage("");
+    setResendLoading(true);
+
+    try {
+      const response = await api.resendVerificationEmail(pendingEmail);
+      setResendMessage(response?.message ?? "Correo reenviado.");
+    } catch (err) {
+      setError(err.message ?? "No se pudo reenviar el correo de verificación.");
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  if (pendingEmail) {
+    return (
+      <div className="aq-login">
+        <div className="aq-login-card">
+          <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: 10 }}>
+            <i className="bi bi-envelope-check-fill" style={{ color: "var(--azul-agua)", fontSize: "1.6rem" }}></i>
+            <span style={{ fontWeight: 600, fontSize: "1.1rem", color: "var(--azul-profundo)", letterSpacing: "0.04em" }}>
+              Revisa tu correo
+            </span>
+          </div>
+
+          <p className="aq-login-sub" style={{ marginBottom: "1rem" }}>
+            Tu cuenta está pendiente de verificación. Te enviamos un enlace firmado a:
+            <br />
+            <strong>{pendingEmail}</strong>
+          </p>
+
+          {error && (
+            <div className="aq-alert-error">
+              <i className="bi bi-exclamation-circle"></i> {error}
+            </div>
+          )}
+
+          {resendMessage && (
+            <div className="aq-alert-success">
+              <i className="bi bi-check-circle"></i> {resendMessage}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="aq-btn-primary"
+            style={{ width: "100%" }}
+            onClick={handleResendVerification}
+            disabled={resendLoading}
+          >
+            {resendLoading ? "Reenviando..." : "Reenviar correo de verificación"}
+          </button>
+
+          <button
+            type="button"
+            className="aq-btn-secondary"
+            style={{ width: "100%", marginTop: "0.75rem" }}
+            onClick={() => {
+              setPendingEmail("");
+              setResendMessage("");
+              setError(null);
+            }}
+          >
+            Volver al login
+          </button>
+
+          <p style={{ fontSize: "0.72rem", color: "var(--texto-secundario)", textAlign: "center", marginTop: "1.2rem" }}>
+            Una vez verifiques el correo, un administrador debe activar tu cuenta para habilitar el acceso.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
