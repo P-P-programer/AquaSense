@@ -22,6 +22,20 @@ Including:
 - `captured_at`
 - device token in `X-Device-Token`
 
+## Temporary RDM6300 Access Test
+
+For RFID access testing, open `firmware/rdm6300_access_test/rdm6300_access_test.ino` in Arduino IDE.
+
+This sketch is temporary and intended to:
+
+- read the RDM6300 UID over Serial2
+- print the raw card code in the Serial Monitor
+- validate the UID against the API and pulse a relay on GPIO 23 when allowed
+
+The sketch reuses the shared `config.h` pattern for WiFi and API values. Copy the example config used by the main ESP32 sketch, fill your credentials locally, and keep the access test sketch out of version control if you want to avoid committing secrets.
+
+After you capture the UID, add it to the database with `tinker` and then switch the sketch from test mode to validation mode.
+
 ## Notes
 
 - This version uses simulated pH until the real pH probe is available.
