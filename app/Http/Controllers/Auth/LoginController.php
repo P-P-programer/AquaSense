@@ -6,8 +6,10 @@ use App\Contracts\LoginServiceInterface;
 use App\Contracts\SessionLogServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class LoginController extends Controller
@@ -72,6 +74,26 @@ class LoginController extends Controller
     public function apiLogin(LoginRequest $request): \Illuminate\Http\JsonResponse
     {
         $credentials = $request->credentials();
+
+        $candidate = User::where('email', $credentials['email'])->first();
+
+        if ($candidate && Hash::check($credentials['password'], $candidate->password)) {
+            if (! $candidate->hasVerifiedEmail()) {
+                return response()->json([
+                    'message' => 'Debes verificar tu correo antes de iniciar sesión.',
+                    'code' => 'email_not_verified',
+                    'email' => $candidate->email,
+                ], 403);
+            }
+
+            if (! $candidate->is_active) {
+                return response()->json([
+                    'message' => 'Tu correo ya fue verificado. Falta activación por un administrador.',
+                    'code' => 'account_inactive',
+                    'email' => $candidate->email,
+                ], 403);
+            }
+        }
 
         if ($request->has('remember_me')) {
             $credentials['remember'] = $request->boolean('remember_me');

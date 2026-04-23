@@ -79,6 +79,7 @@ const api = {
 
   login: (email, password, remember = false) => api.post("/login", { email, password, remember, remember_me: remember }),
   logout: () => api.post("/logout"),
+  resendVerificationEmail: (email) => api.post("/email/verification-notification", { email }),
   me: () => api.get("/me"),
   getStats: () => api.get("/stats"),
   getRegistros: (params = {}) => {
