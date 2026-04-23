@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 class LoginService implements LoginServiceInterface
 {
     /**
-     * Intenta autenticar al usuario verificando también que esté activo.
+     * Intenta autenticar al usuario verificando también que esté activo y verificado.
      *
      * No lanza excepciones — devuelve null si algo falla.
      * El controller decide qué response enviar.
@@ -31,8 +31,8 @@ class LoginService implements LoginServiceInterface
         /** @var User $user */
         $user = Auth::user();
 
-        // Verificar que la cuenta esté activa
-        if (! $user->is_active) {
+        // Verificar que la cuenta esté activa y su correo confirmado.
+        if (! $user->is_active || ! $user->hasVerifiedEmail()) {
             Auth::logout();
             return null;
         }

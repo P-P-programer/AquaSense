@@ -27,6 +27,37 @@ function StatusChipNeutral({ active }) {
   return <span className={`aq-state-chip ${active ? "neutral-on" : "neutral-off"}`}>{active ? "activo" : "inactivo"}</span>;
 }
 
+function getVerificationState(user) {
+  const status = user?.verification_status;
+
+  if (status === "activo") {
+    return { label: "activo", chipClass: "online" };
+  }
+
+  if (status === "verificado") {
+    return { label: "verificado", chipClass: "neutral-on" };
+  }
+
+  if (status === "pendiente") {
+    return { label: "pendiente", chipClass: "neutral-off" };
+  }
+
+  if (!user?.email_verified_at) {
+    return { label: "pendiente", chipClass: "neutral-off" };
+  }
+
+  if (user?.is_active) {
+    return { label: "activo", chipClass: "online" };
+  }
+
+  return { label: "verificado", chipClass: "neutral-on" };
+}
+
+function VerificationStatusChip({ user }) {
+  const { label, chipClass } = getVerificationState(user);
+  return <span className={`aq-state-chip ${chipClass}`}>{label}</span>;
+}
+
 function formatThresholdLabel(entity) {
   const sourceThresholds = entity?.effective_ph_thresholds ?? entity;
   const safeMin = sourceThresholds?.safe_min ?? sourceThresholds?.ph_safe_min;
@@ -637,7 +668,7 @@ export default function AdminPanel() {
                       <div className="aq-table-meta">{user.email}</div>
                     </td>
                     <td data-label="Rol">{user.role}</td>
-                    <td data-label="Estado"><StatusChip online={user.is_active} labelOnline="activo" labelOffline="inactivo" /></td>
+                    <td data-label="Estado"><VerificationStatusChip user={user} /></td>
                     <td data-label="Umbral pH">
                       <strong>{formatThresholdLabel(user)}</strong>
                       <div className="aq-table-meta">origen: {formatThresholdSource(user, "usuario")}</div>

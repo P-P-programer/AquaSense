@@ -53,6 +53,44 @@ El proyecto usa Web Push para notificaciones en navegador con VAPID. Cada entorn
 
 `ALERT_PUSH_MIN_SEVERITY` controla desde qué severidad se envían notificaciones push. Para administradores, las alertas críticas por correo quedan forzadas por seguridad.
 
+## Queue Worker Automation (Cron)
+
+En este proyecto los correos y notificaciones usan cola de Laravel. En hosting compartido (como Hostinger), el worker no debe correrse manualmente por SSH porque se apaga al cerrar sesión. La forma correcta es automatizarlo con cron.
+
+### Opción A: Cron desde panel de Hostinger (recomendado)
+
+1. Ve a `Advanced -> Cron Jobs`.
+2. Crea un cron con frecuencia `cada minuto`.
+3. Usa un comando como este (ajusta rutas y binario PHP):
+
+```bash
+/usr/bin/php /home/USER/domains/TU_DOMINIO/public_html/artisan queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3 >> /home/USER/domains/TU_DOMINIO/public_html/storage/logs/queue-worker.log 2>&1
+```
+
+### Opción B: Cron por SSH (`crontab -e`)
+
+Si prefieres terminal y tu plan lo permite:
+
+```bash
+crontab -e
+```
+
+Agrega esta línea:
+
+```bash
+* * * * * /usr/bin/php /home/USER/domains/TU_DOMINIO/public_html/artisan queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3 >> /home/USER/domains/TU_DOMINIO/public_html/storage/logs/queue-worker.log 2>&1
+```
+
+### Validación rápida
+
+1. Encola una notificación/correo desde la app.
+2. Revisa `jobs` para confirmar que la cola se vacía.
+3. Verifica logs en `storage/logs/queue-worker.log`.
+
+### Nota importante
+
+El cron no reemplaza la cola: solo ejecuta periódicamente `queue:work`. Para hosting compartido es la estrategia más estable y de menor consumo.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
