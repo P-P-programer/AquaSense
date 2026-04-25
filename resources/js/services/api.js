@@ -9,23 +9,107 @@ import { enqueueOutboxRequest } from "./outbox";
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 export const API_BASE_URL = BASE_URL;
+const GET_CACHE_PREFIX = "aquasense.getcache.v1";
 
 let csrfReady = false;
+let csrfLastFailedAt = 0;
+const CSRF_RETRY_COOLDOWN_MS = 5000;
+
+function isOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+function buildOfflineError(message = "Sin conexión a internet") {
+  const err = new Error(message);
+  err.status = 0;
+  err.offline = true;
+  return err;
+}
+
+function canUseStorage() {
+  return typeof window !== "undefined" && !!window.localStorage;
+}
+
+function shouldCacheGet(path) {
+  const allowedPrefixes = [
+    "/stats",
+    "/registros",
+    "/alerts",
+    "/cities",
+    "/me/alert-preferences",
+  ];
+
+  return allowedPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function buildGetCacheKey(path) {
+  return `${GET_CACHE_PREFIX}:${path}`;
+}
+
+function readGetCache(path) {
+  if (!canUseStorage()) return null;
+
+  try {
+    const key = buildGetCacheKey(path);
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeGetCache(path, data) {
+  if (!canUseStorage()) return;
+
+  try {
+    const key = buildGetCacheKey(path);
+    const payload = {
+      path,
+      cachedAt: new Date().toISOString(),
+      data,
+    };
+
+    window.localStorage.setItem(key, JSON.stringify(payload));
+  } catch {
+    // Ignore storage errors to avoid breaking normal API flow.
+  }
+}
 
 async function ensureCsrf() {
   if (csrfReady) return;
+  if (isOffline()) {
+    throw buildOfflineError();
+  }
 
-  const res = await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
-    method: "GET",
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
+  const now = Date.now();
+  if (csrfLastFailedAt > 0 && now - csrfLastFailedAt < CSRF_RETRY_COOLDOWN_MS) {
+    throw buildOfflineError("Reintentando conexión...");
+  }
+
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}/sanctum/csrf-cookie`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    csrfLastFailedAt = Date.now();
+    throw buildOfflineError();
+  }
 
   if (!res.ok) {
+    csrfLastFailedAt = Date.now();
     throw new Error(`No se pudo obtener CSRF cookie (${res.status})`);
   }
 
   csrfReady = true;
+  csrfLastFailedAt = 0;
 }
 
 function getXsrfToken() {
@@ -65,9 +149,21 @@ function buildOfflineQueuedResponse(method, path, body) {
 async function request(method, path, body = null) {
   const mutating = isMutatingMethod(method);
   const queueable = mutating && shouldQueueOffline(path);
+  const cacheableGet = !mutating && shouldCacheGet(path);
+
+  if (!mutating && isOffline()) {
+    if (cacheableGet) {
+      const cached = readGetCache(path);
+      if (cached) {
+        return cached.data;
+      }
+    }
+
+    throw buildOfflineError();
+  }
 
   if (mutating) {
-    if (queueable && typeof navigator !== "undefined" && !navigator.onLine) {
+    if (queueable && isOffline()) {
       return buildOfflineQueuedResponse(method, path, body);
     }
 
@@ -103,6 +199,13 @@ async function request(method, path, body = null) {
   try {
     res = await fetch(`${BASE_URL}/api${path}`, options);
   } catch (error) {
+    if (cacheableGet) {
+      const cached = readGetCache(path);
+      if (cached) {
+        return cached.data;
+      }
+    }
+
     if (queueable) {
       return buildOfflineQueuedResponse(method, path, body);
     }
@@ -121,6 +224,10 @@ async function request(method, path, body = null) {
       `Error ${res.status}`;
 
     throw Object.assign(new Error(message), { status: res.status, data });
+  }
+
+  if (cacheableGet) {
+    writeGetCache(path, data);
   }
 
   return data;

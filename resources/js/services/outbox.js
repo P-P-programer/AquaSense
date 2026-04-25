@@ -89,10 +89,25 @@ export function enqueueOutboxRequest({ method, path, body }) {
   const signature = buildSignature(method, path, body);
 
   const existing = queue.find(
-    (item) => item.status === "pending" && item.signature === signature,
+    (item) => ["pending", "syncing", "error"].includes(item.status) && item.signature === signature,
   );
 
   if (existing) {
+    if (existing.status === "error") {
+      const index = queue.findIndex((item) => item.id === existing.id);
+      if (index >= 0) {
+        queue[index] = {
+          ...queue[index],
+          status: "pending",
+          nextRetryAt: null,
+          lastError: null,
+          updatedAt: nowIso(),
+        };
+        saveQueue(queue);
+        return queue[index];
+      }
+    }
+
     return existing;
   }
 

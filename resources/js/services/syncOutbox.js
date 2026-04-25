@@ -12,21 +12,50 @@ let syncIntervalId = null;
 let onlineHandler = null;
 
 let csrfReady = false;
+let csrfLastFailedAt = 0;
+const CSRF_RETRY_COOLDOWN_MS = 5000;
+
+function isOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+function buildOfflineError(message = "Sin conexión a internet") {
+  const err = new Error(message);
+  err.status = 0;
+  err.offline = true;
+  return err;
+}
 
 async function ensureCsrf(baseUrl) {
   if (csrfReady) return;
+  if (isOffline()) {
+    throw buildOfflineError();
+  }
 
-  const res = await fetch(`${baseUrl}/sanctum/csrf-cookie`, {
-    method: "GET",
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
+  const now = Date.now();
+  if (csrfLastFailedAt > 0 && now - csrfLastFailedAt < CSRF_RETRY_COOLDOWN_MS) {
+    throw buildOfflineError("Reintentando conexión...");
+  }
+
+  let res;
+  try {
+    res = await fetch(`${baseUrl}/sanctum/csrf-cookie`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+  } catch {
+    csrfLastFailedAt = Date.now();
+    throw buildOfflineError();
+  }
 
   if (!res.ok) {
+    csrfLastFailedAt = Date.now();
     throw new Error(`No se pudo obtener CSRF cookie (${res.status})`);
   }
 
   csrfReady = true;
+  csrfLastFailedAt = 0;
 }
 
 function getXsrfToken() {
