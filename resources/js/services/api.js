@@ -4,8 +4,11 @@
  * - Permite override con VITE_API_URL
  */
 
+import { enqueueOutboxRequest } from "./outbox";
+
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
+export const API_BASE_URL = BASE_URL;
 
 let csrfReady = false;
 
@@ -30,14 +33,58 @@ function getXsrfToken() {
   return match ? decodeURIComponent(match[1]) : "";
 }
 
+function isMutatingMethod(method) {
+  return method !== "GET";
+}
+
+function shouldQueueOffline(path) {
+  // Evita encolar rutas sensibles de autenticación o endpoints que no deben reintentarse en background.
+  const blockedPrefixes = [
+    "/login",
+    "/logout",
+    "/me",
+    "/email/verification-notification",
+    "/access/rfid/validate",
+    "/push/subscribe",
+    "/push/unsubscribe",
+  ];
+
+  return !blockedPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function buildOfflineQueuedResponse(method, path, body) {
+  const outboxItem = enqueueOutboxRequest({ method, path, body });
+
+  return {
+    offlineQueued: true,
+    outboxId: outboxItem.id,
+    message: "Sin internet: acción guardada para sincronizar cuando vuelva la conexión.",
+  };
+}
+
 async function request(method, path, body = null) {
-  if (method !== "GET") {
-    await ensureCsrf();
+  const mutating = isMutatingMethod(method);
+  const queueable = mutating && shouldQueueOffline(path);
+
+  if (mutating) {
+    if (queueable && typeof navigator !== "undefined" && !navigator.onLine) {
+      return buildOfflineQueuedResponse(method, path, body);
+    }
+
+    try {
+      await ensureCsrf();
+    } catch (error) {
+      if (queueable) {
+        return buildOfflineQueuedResponse(method, path, body);
+      }
+
+      throw error;
+    }
   }
 
   const headers = { Accept: "application/json" };
 
-  if (method !== "GET") {
+  if (mutating) {
     headers["Content-Type"] = "application/json";
     headers["X-XSRF-TOKEN"] = getXsrfToken();
   }
@@ -52,7 +99,16 @@ async function request(method, path, body = null) {
     options.body = JSON.stringify(body);
   }
 
-  const res = await fetch(`${BASE_URL}/api${path}`, options);
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}/api${path}`, options);
+  } catch (error) {
+    if (queueable) {
+      return buildOfflineQueuedResponse(method, path, body);
+    }
+
+    throw error;
+  }
 
   if (res.status === 204) return null;
 

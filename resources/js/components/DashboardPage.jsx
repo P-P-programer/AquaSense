@@ -7,6 +7,7 @@ import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
 import api from "../services/api";
+import { getOutboxSnapshot, subscribeOutboxStatus } from "../services/outbox";
 
 const SECTION_META = {
   overview: {
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [resolvingAlertId, setResolvingAlertId] = useState(null);
+  const [outboxState, setOutboxState] = useState(() => getOutboxSnapshot());
   const notifyRef = useRef(null);
 
   const sections = useMemo(() => {
@@ -159,8 +161,34 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [notifyOpen]);
 
+  useEffect(() => {
+    return subscribeOutboxStatus((snapshot) => {
+      setOutboxState(snapshot);
+    });
+  }, []);
+
   const criticalCount = alerts.filter((alert) => alert.severity === "critica").length;
   const currentMeta = SECTION_META[activeSection] ?? SECTION_META.overview;
+
+  const outboxLabel = (() => {
+    if (!outboxState.online) {
+      return `Offline · pendientes ${outboxState.pending}`;
+    }
+
+    if (outboxState.syncing > 0) {
+      return `Sincronizando ${outboxState.syncing}`;
+    }
+
+    if (outboxState.pending > 0) {
+      return `Pendientes ${outboxState.pending}`;
+    }
+
+    if (outboxState.error > 0) {
+      return `Errores sync ${outboxState.error}`;
+    }
+
+    return "Sincronizado";
+  })();
 
   async function handleLogout() {
     const confirmed = window.confirm("¿Seguro que deseas cerrar sesión?");
@@ -221,6 +249,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="aq-topbar-right" ref={notifyRef}>
+            <div className="aq-status-pill" title="Estado de sincronización offline">
+              <i className="bi bi-arrow-repeat"></i>
+              {outboxLabel}
+            </div>
+
             <div className="aq-status-pill">
               <i className="bi bi-circle-fill"></i>
               ESP32 en línea
