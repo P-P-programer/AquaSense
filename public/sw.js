@@ -53,11 +53,25 @@ self.addEventListener('notificationclick', event => {
 const swUrl = new URL(self.location.href);
 const BUILD_VERSION = swUrl.searchParams.get('v') || 'dev';
 const CACHE_VERSION = `aquasense-cache-${BUILD_VERSION}`;
+const API_CACHE_VERSION = `aquasense-api-cache-${BUILD_VERSION}`;
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/icon-192.png'
 ];
+const API_CACHEABLE_PREFIXES = [
+  '/api/stats',
+  '/api/registros',
+  '/api/alerts',
+  '/api/cities',
+  '/api/me/alert-preferences',
+];
+
+function isCacheableApiRequest(url, request) {
+  if (request.method !== 'GET') return false;
+  if (url.origin !== self.location.origin) return false;
+  return API_CACHEABLE_PREFIXES.some(prefix => url.pathname.startsWith(prefix));
+}
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
@@ -81,7 +95,10 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName.startsWith('aquasense-cache-') && cacheName !== CACHE_VERSION) {
+          const isStaticCache = cacheName.startsWith('aquasense-cache-') && cacheName !== CACHE_VERSION;
+          const isApiCache = cacheName.startsWith('aquasense-api-cache-') && cacheName !== API_CACHE_VERSION;
+
+          if (isStaticCache || isApiCache) {
             console.log('[PWA] Eliminando caché antiguo:', cacheName);
             return caches.delete(cacheName);
           }
@@ -101,8 +118,44 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
 
-  // No cachear peticiones a API, sanctum, o rutas dinámicas
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/sanctum/')) {
+  if (url.pathname.startsWith('/sanctum/')) {
+    return;
+  }
+
+  // API de lectura seleccionada: network-first con fallback a cache.
+  if (isCacheableApiRequest(url, request)) {
+    event.respondWith((async () => {
+      const apiCache = await caches.open(API_CACHE_VERSION);
+
+      try {
+        const networkResponse = await fetch(request);
+
+        if (networkResponse && networkResponse.ok) {
+          await apiCache.put(request, networkResponse.clone());
+        }
+
+        return networkResponse;
+      } catch (_) {
+        const cached = await apiCache.match(request);
+        if (cached) {
+          return cached;
+        }
+
+        return new Response(
+          JSON.stringify({ message: 'Sin conexión y sin cache disponible.' }),
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    })());
+
+    return;
+  }
+
+  // Otras APIs no se cachean en SW.
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
