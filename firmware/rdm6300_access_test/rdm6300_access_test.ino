@@ -28,6 +28,9 @@ static const unsigned long RDM6300_BAUD_RATE = 9600;
 static const int RELAY_PIN = 23;
 static const bool RELAY_ACTIVE_LOW = true;
 static const unsigned long RELAY_PULSE_MS = 1500UL;
+static const int BUZZER_PIN = 15;
+static const bool BUZZER_ACTIVE_HIGH = true;
+static const unsigned long BUZZER_PULSE_MS = 220UL;
 static const unsigned long WIFI_RETRY_MS = 15000UL;
 static const unsigned long VALIDATION_COOLDOWN_MS = 2000UL;
 static const char* ACCESS_VALIDATE_PATH = "/api/access/rfid/validate";
@@ -36,6 +39,7 @@ String currentFrame;
 String lastUid;
 bool inFrame = false;
 unsigned long relayOffAt = 0;
+unsigned long buzzerOffAt = 0;
 unsigned long lastWifiAttemptAt = 0;
 unsigned long lastValidationAt = 0;
 
@@ -44,6 +48,14 @@ void setRelay(bool enabled) {
     digitalWrite(RELAY_PIN, enabled ? LOW : HIGH);
   } else {
     digitalWrite(RELAY_PIN, enabled ? HIGH : LOW);
+  }
+}
+
+void setBuzzer(bool enabled) {
+  if (BUZZER_ACTIVE_HIGH) {
+    digitalWrite(BUZZER_PIN, enabled ? HIGH : LOW);
+  } else {
+    digitalWrite(BUZZER_PIN, enabled ? LOW : HIGH);
   }
 }
 
@@ -68,6 +80,9 @@ void pulseRelay() {
   Serial.println("[RELAY] Door relay opened.");
   setRelay(true);
   relayOffAt = millis() + RELAY_PULSE_MS;
+
+  setBuzzer(true);
+  buzzerOffAt = millis() + BUZZER_PULSE_MS;
 }
 
 void connectWiFi() {
@@ -233,6 +248,8 @@ void setup() {
 
   pinMode(RELAY_PIN, OUTPUT);
   setRelay(false);
+  pinMode(BUZZER_PIN, OUTPUT);
+  setBuzzer(false);
 
   RdmSerial.begin(RDM6300_BAUD_RATE, SERIAL_8N1, RDM6300_RX_PIN, RDM6300_TX_PIN);
 
@@ -242,6 +259,7 @@ void setup() {
   Serial.println("AquaSense RDM6300 access validation");
   Serial.printf("RDM6300 RX pin: %d\n", RDM6300_RX_PIN);
   Serial.printf("Relay pin: %d\n", RELAY_PIN);
+  Serial.printf("Buzzer pin: %d\n", BUZZER_PIN);
   runtimeConfig = getRuntimeConfig();
 
   Serial.printf("API base: %s\n", runtimeConfig.apiBase);
@@ -258,6 +276,11 @@ void loop() {
     setRelay(false);
     relayOffAt = 0;
     Serial.println("[RELAY] Door relay closed.");
+  }
+
+  if (buzzerOffAt > 0 && millis() >= buzzerOffAt) {
+    setBuzzer(false);
+    buzzerOffAt = 0;
   }
 
   if (WiFi.status() != WL_CONNECTED) {
