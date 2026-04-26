@@ -13,6 +13,11 @@ export function useWebPush() {
 
     const subscribe = async () => {
       try {
+        if (!navigator.onLine) {
+          console.warn('Web Push skipped: offline');
+          return;
+        }
+
         const registration = await navigator.serviceWorker.ready;
 
         // Verificar si ya está suscrito
@@ -40,6 +45,12 @@ export function useWebPush() {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
+
+        const keys = newSubscription?.toJSON?.()?.keys;
+        if (!newSubscription?.endpoint || !keys?.auth || !keys?.p256dh) {
+          console.warn('Web Push subscription invalid payload');
+          return;
+        }
 
         subscriptionRef.current = newSubscription;
         sendSubscriptionToBackend(newSubscription);
