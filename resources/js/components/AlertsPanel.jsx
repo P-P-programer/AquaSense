@@ -36,6 +36,10 @@ export default function AlertsPanel() {
       throw new Error("Web Push no es compatible en este navegador.");
     }
 
+    if (!navigator.onLine) {
+      throw new Error("Sin conexión a internet. Activa la red para registrar notificaciones push.");
+    }
+
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
 
@@ -45,15 +49,24 @@ export default function AlertsPanel() {
         throw new Error("VAPID_PUBLIC_KEY no configurada");
       }
 
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } catch (err) {
+        throw new Error(err?.message || "Registration failed - push service error");
+      }
+    }
+
+    const subscriptionKeys = subscription?.toJSON?.()?.keys;
+    if (!subscription?.endpoint || !subscriptionKeys?.auth || !subscriptionKeys?.p256dh) {
+      throw new Error("La suscripción push no contiene endpoint/keys válidas.");
     }
 
     await api.subscribeToPush({
       endpoint: subscription.endpoint,
-      keys: subscription.toJSON().keys,
+      keys: subscriptionKeys,
     });
 
     setPushSubscribed(true);

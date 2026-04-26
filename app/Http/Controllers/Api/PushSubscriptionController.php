@@ -14,7 +14,7 @@ class PushSubscriptionController extends Controller
     public function subscribe(Request $request)
     {
         $validated = $request->validate([
-            'endpoint' => 'required|url',
+            'endpoint' => 'required|string|max:2048',
             'keys' => 'required|array',
             'keys.auth' => 'required|string',
             'keys.p256dh' => 'required|string',
@@ -52,7 +52,7 @@ class PushSubscriptionController extends Controller
     public function unsubscribe(Request $request)
     {
         $validated = $request->validate([
-            'endpoint' => 'required|url',
+            'endpoint' => 'required|string|max:2048',
         ]);
 
         $user = auth()->user();
