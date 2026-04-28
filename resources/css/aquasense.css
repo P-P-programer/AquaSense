@@ -291,6 +291,86 @@ body {
   gap: 0.7rem;
 }
 
+/* ── PWA Install Banner (módulo exclusivo) ───────────────────────── */
+.aq-pwa-banner {
+  position: relative;
+  z-index: 1;
+  margin: 1rem 1.3rem 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(26, 86, 219, 0.18);
+  border-left: 4px solid var(--azul-agua);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 247, 255, 0.98) 100%);
+  box-shadow: 0 18px 40px rgba(13, 43, 85, 0.12);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  animation: aq-banner-drop 0.28s ease;
+}
+
+.aq-pwa-banner-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #1a56db 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.25);
+}
+
+.aq-pwa-banner-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.aq-pwa-banner-body {
+  min-width: 0;
+}
+
+.aq-pwa-banner-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--azul-profundo);
+  margin-bottom: 0.18rem;
+}
+
+.aq-pwa-banner-body p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--texto-secundario);
+}
+
+.aq-pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.aq-pwa-banner-close,
+.aq-pwa-banner-install {
+  min-height: 40px;
+}
+
+.aq-pwa-banner-install:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.aq-pwa-banner-hint {
+  grid-column: 2 / 4;
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  color: #1d4ed8;
+}
+
 .aq-notify-head,
 .aq-notify-item-top {
   display: flex;
@@ -343,6 +423,44 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes aq-banner-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 860px) {
+  .aq-pwa-banner {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    margin: 0.85rem 1rem 0;
+  }
+
+  .aq-pwa-banner-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .aq-pwa-banner-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .aq-pwa-banner-actions .aq-pwa-banner-close,
+  .aq-pwa-banner-actions .aq-pwa-banner-install {
+    flex: 1 1 170px;
+  }
+
+  .aq-pwa-banner-hint {
+    grid-column: auto;
   }
 }
 

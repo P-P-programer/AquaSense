@@ -4,6 +4,7 @@ import AdminPanel from "./AdminPanel";
 import AlertsPanel from "./AlertsPanel";
 import AlertPreferencesPanel from "./AlertPreferencesPanel";
 import ChartComponent from "./ChartComponent";
+import PwaInstallBanner from "./PwaInstallBanner";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
 import api from "../services/api";
@@ -282,6 +283,8 @@ export default function DashboardPage() {
             </button>
           </div>
         </header>
+
+        <PwaInstallBanner />
 
         <main className="aq-content-shell">
           {activeSection === "overview" && (
