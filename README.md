@@ -154,4 +154,3 @@ feat(pwa): add install banner UX and fix push subscription handling
 
 ---
 
-Si quieres, puedo añadir más detalles (ej. `manifest.json` mínimo, ejemplo de `.env` solo con claves VAPID, o pasos para debug de service worker).
