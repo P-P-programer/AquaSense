@@ -1,108 +1,157 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# AquaSense
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+AquaSense es una aplicación web (Laravel backend + React/Vite frontend) que funciona como PWA, soporta notificaciones Web Push (VAPID) y utiliza colas (driver: database) junto con un patrón Outbox para sincronización offline.
 
-## About Laravel
+**Requisitos mínimos**
+- PHP 8.1+
+- Composer
+- Node.js 18+ y npm (o pnpm)
+- Base de datos compatible (MySQL / MariaDB recomendados)
+- HTTPS en producción (service workers y Web Push requieren origen seguro). `localhost` es seguro para desarrollo.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Instalación rápida (desarrollo)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+1. Clona el repositorio y entra en la carpeta:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone <repo> && cd AquaSense
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+2. Copia el env y ajusta variables (`DB_*`, `APP_URL`, etc.):
 
-## Web Push Setup
+```bash
+cp .env.example .env
+```
 
-El proyecto usa Web Push para notificaciones en navegador con VAPID. Cada entorno debe tener su propio par de claves.
+3. Instala dependencias PHP y JS:
 
-1. Copia `.env.example` a `.env` si todavía no lo hiciste.
-2. Genera las claves con `php artisan webpush:generate-vapid-keys`.
-3. Pega `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` en tu `.env`.
-4. En producción, usa un par estable y no lo versionas.
-5. Si rotas las claves, los usuarios deberán volver a suscribirse a push.
+```bash
+composer install
+npm install
+```
 
-`ALERT_PUSH_MIN_SEVERITY` controla desde qué severidad se envían notificaciones push. Para administradores, las alertas críticas por correo quedan forzadas por seguridad.
+4. Genera la `APP_KEY`:
 
-## Queue Worker Automation (Cron)
+```bash
+php artisan key:generate
+```
 
-En este proyecto los correos y notificaciones usan cola de Laravel. En hosting compartido (como Hostinger), el worker no debe correrse manualmente por SSH porque se apaga al cerrar sesión. La forma correcta es automatizarlo con cron.
+5. Ejecuta migraciones y seeders:
 
-### Opción A: Cron desde panel de Hostinger (recomendado)
+```bash
+php artisan migrate --seed
+```
 
-1. Ve a `Advanced -> Cron Jobs`.
-2. Crea un cron con frecuencia `cada minuto`.
-3. Usa un comando como este (ajusta rutas y binario PHP):
+6. En desarrollo: arranca Vite:
+
+```bash
+npm run dev
+```
+
+En producción: construye los assets:
+
+```bash
+npm run build
+```
+
+Si usas almacenamiento público, crea el enlace simbólico:
+
+```bash
+php artisan storage:link
+```
+
+## Web Push (VAPID)
+
+El proyecto usa Web Push para notificaciones en navegador. Cada entorno debería usar su propio par de claves VAPID.
+
+1. Genera las claves VAPID:
+
+```bash
+php artisan webpush:generate-vapid-keys
+```
+
+2. Añade al `.env`:
+
+- `VAPID_PUBLIC_KEY=`
+- `VAPID_PRIVATE_KEY=`
+- `VAPID_SUBJECT=mailto:ops@example.com`
+
+3. Verificación rápida (longitud de la clave pública):
+
+```bash
+php artisan tinker --execute="echo strlen(config('webpush.vapid_public_key'));." 
+```
+
+Notas:
+- El backend guarda `endpoint` como `string` (longitud límite) porque algunos proveedores devuelven URLs que validadores `url` estrictos rechazan.
+- El payload de suscripción esperado desde el frontend tiene esta forma:
+
+```json
+{
+	"endpoint": "https://fcm.googleapis.com/fcm/send/..",
+	"keys": { "p256dh": "...", "auth": "..." }
+}
+```
+
+Si el backend rechaza la petición revisa la respuesta HTTP y `storage/logs/laravel.log`.
+
+## PWA / Instalación
+
+- Entrada del frontend: `resources/js/index.jsx`.
+- Service worker: `public/sw.js` (registrado desde `resources/views/welcome.blade.php`).
+- Banner de instalación: `resources/js/components/PwaInstallBanner.jsx` (manejador de `beforeinstallprompt` y fallback para iOS).
+
+Requisitos mínimos para que navegadores promuevan la instalación (Chrome/Chromium):
+- Servir por HTTPS (o `localhost`).
+- Manifest con `name`/`short_name`, `icons` que incluyan 192×192 y 512×512, `start_url`, y `display` en `standalone`/`fullscreen`/`minimal-ui`.
+- Interacción/engagement del usuario (navegadores piden mínimo de interacción/tiempo antes de lanzar `beforeinstallprompt`).
+
+Recomendación: añade `description` y `screenshots` en `manifest.json` para mejorar la experiencia de instalación en Android.
+
+## Queue / Worker (Hostinger u hosting compartido)
+
+Se recomienda usar cron para ejecutar periódicamente el worker en entornos compartidos. Ejemplo de cron (ajusta rutas/usuario):
 
 ```bash
 /usr/bin/php /home/USER/domains/TU_DOMINIO/public_html/artisan queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3 >> /home/USER/domains/TU_DOMINIO/public_html/storage/logs/queue-worker.log 2>&1
 ```
 
-### Opción B: Cron por SSH (`crontab -e`)
+Validación rápida:
+1. Crea una notificación/job desde la app.
+2. Comprueba que la tabla `jobs` se vacía.
+3. Revisa `storage/logs/queue-worker.log`.
 
-Si prefieres terminal y tu plan lo permite:
+## Depuración y troubleshooting rápido
+
+- Logs: `storage/logs/laravel.log`.
+- Service worker: Chrome DevTools → Application → Service Workers (ver estado, scope y errores).
+- Web Push: DevTools → Network → filtra `/push/subscribe` y revisa `endpoint` y `keys` en la petición.
+- VAPID: comprobar longitud de `VAPID_PUBLIC_KEY` con Tinker (ver arriba).
+
+## Tests y checks
+
+- Ejecutar tests PHP:
 
 ```bash
-crontab -e
+php artisan test
 ```
 
-Agrega esta línea:
+- Build frontend:
 
 ```bash
-* * * * * /usr/bin/php /home/USER/domains/TU_DOMINIO/public_html/artisan queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3 >> /home/USER/domains/TU_DOMINIO/public_html/storage/logs/queue-worker.log 2>&1
+npm run build
 ```
 
-### Validación rápida
+## Contribuir
 
-1. Encola una notificación/correo desde la app.
-2. Revisa `jobs` para confirmar que la cola se vacía.
-3. Verifica logs en `storage/logs/queue-worker.log`.
+- Crea una rama por feature: `git checkout -b feat/mi-cambio`.
+- Haz PR con descripción y pasos para reproducir.
+- Ejemplo de mensaje de commit para cambios PWA/push:
 
-### Nota importante
+```
+feat(pwa): add install banner UX and fix push subscription handling
+```
 
-El cron no reemplaza la cola: solo ejecuta periódicamente `queue:work`. Para hosting compartido es la estrategia más estable y de menor consumo.
+---
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Si quieres, puedo añadir más detalles (ej. `manifest.json` mínimo, ejemplo de `.env` solo con claves VAPID, o pasos para debug de service worker).
