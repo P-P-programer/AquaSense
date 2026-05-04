@@ -25,3 +25,6 @@ Thumbs.db
 
 # Firmware secrets
 firmware/**/config.h
+
+# Local docs drafts
+docs/EXPORTS_RFC.md
