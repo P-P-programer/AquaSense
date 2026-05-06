@@ -88,6 +88,10 @@ Route::middleware('web')->group(function () {
         Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe']);
         Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
         Route::get('/push/status', [PushSubscriptionController::class, 'status']);
+        
+        // Reports (aggregations and exports)
+        Route::post('/reports/query', [\App\Http\Controllers\Api\ReportsController::class, 'query']);
+        Route::post('/reports/export', [\App\Http\Controllers\Api\ReportsController::class, 'export']);
     });
 
     Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {

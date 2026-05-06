@@ -28,3 +28,4 @@ firmware/**/config.h
 
 # Local docs drafts
 docs/EXPORTS_RFC.md
+docs/REPORTS_LOCAL.md
