@@ -3,8 +3,8 @@ import api from "../services/api";
 
 const estadoLabel = { ok: "Normal", warn: "Alerta", danger: "Crítico" };
 
-export default function TableComponent() {
-  const [data,  setData]  = useState([]);
+export default function TableComponent({ data: externalData = null, title = null, limit = 10 }) {
+  const [data,  setData]  = useState(Array.isArray(externalData) ? externalData.slice(0, limit) : []);
   const [cities, setCities] = useState([]);
   const [cityFilter, setCityFilter] = useState("");
   const [cityQuery, setCityQuery] = useState("");
@@ -21,18 +21,25 @@ export default function TableComponent() {
     : cities.slice(0, 8);
 
   useEffect(() => {
+    if (Array.isArray(externalData)) {
+      setLoading(false);
+      setError(null);
+      setData(externalData.slice(0, limit));
+      return;
+    }
+
     setLoading(true);
     api.getRegistros({
       city_id: cityFilter || undefined,
       limit: 20,
     })
       .then(registros => {
-        // Muestra los 10 más recientes, del más nuevo al más viejo
-        setData(Array.isArray(registros) ? registros.slice(0, 10) : []);
+        // Muestra los `limit` más recientes, del más nuevo al más viejo
+        setData(Array.isArray(registros) ? registros.slice(0, limit) : []);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [cityFilter]);
+  }, [cityFilter, externalData, limit]);
 
   useEffect(() => {
     api.getCities()
@@ -73,7 +80,7 @@ export default function TableComponent() {
     <div className="aq-panel">
       <div className="aq-panel-title">
         <i className="bi bi-table"></i>
-        Registros actuales
+        {title ?? "Registros actuales"}
       </div>
       <div className="aq-alerts-filters" style={{ marginBottom: "0.65rem" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 240 }}>

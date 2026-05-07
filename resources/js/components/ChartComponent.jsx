@@ -31,8 +31,8 @@ function toShortTimeLabel(value) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ChartComponent() {
-  const [data,  setData]  = useState([]);
+export default function ChartComponent({ data: externalData = null, title = null, limit = 10 }) {
+  const [data,  setData]  = useState(Array.isArray(externalData) ? externalData.slice(0, limit) : []);
   const [cities, setCities] = useState([]);
   const [safeRange, setSafeRange] = useState({ safeMin: null, safeMax: null });
   const [cityFilter, setCityFilter] = useState("");
@@ -56,18 +56,25 @@ export default function ChartComponent() {
   }, [cities, cityQuery]);
 
   useEffect(() => {
+    if (Array.isArray(externalData)) {
+      setLoading(false);
+      setError(null);
+      setData(externalData.slice(0, limit));
+      return;
+    }
+
     setLoading(true);
     api.getRegistros({
       city_id: cityFilter || undefined,
       limit: 20,
     })
       .then(registros => {
-        // Toma los últimos 10 registros para la gráfica
-        setData(Array.isArray(registros) ? registros.slice(0, 10) : []);
+        // Toma los últimos `limit` registros para la gráfica
+        setData(Array.isArray(registros) ? registros.slice(0, limit) : []);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  }, [cityFilter]);
+  }, [cityFilter, externalData, limit]);
 
   useEffect(() => {
     api.getCities()
@@ -200,7 +207,7 @@ export default function ChartComponent() {
     <div className="aq-panel">
       <div className="aq-panel-title">
         <i className="bi bi-bar-chart-fill"></i>
-        Tendencia de pH — últimos 10 registros
+        {title ?? `Tendencia de pH — últimos ${limit} registros`}
       </div>
       <div className="aq-alerts-filters" style={{ marginBottom: "0.65rem" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 0 }}>

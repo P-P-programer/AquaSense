@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import ChartComponent from "./ChartComponent";
+import TableComponent from "./TableComponent";
 
 export default function ReportesPanel() {
   const [stats, setStats] = useState(null);
@@ -11,6 +13,7 @@ export default function ReportesPanel() {
     metric: "ph",
     granularity: "week",
   });
+  const [reportResult, setReportResult] = useState(null);
 
   useEffect(() => {
     api.getStats()
@@ -44,6 +47,7 @@ export default function ReportesPanel() {
 
     try {
       const response = await api.consultarReportes(filtrosBase);
+      setReportResult(response ?? null);
       setActionMessage(response?.meta?.mensaje ?? "Consulta de reportes lista.");
     } catch (err) {
       setActionMessage(err.message ?? "No se pudo consultar el reporte.");
@@ -192,6 +196,32 @@ export default function ReportesPanel() {
         </section>
       </div>
 
+      {reportResult && (
+        <div style={{ marginTop: "1rem" }}>
+          <section className="aq-panel">
+            <div className="aq-panel-title">
+              <i className="bi bi-bar-chart-fill"></i>
+              Resultados de la consulta
+            </div>
+            <div style={{ marginTop: "0.6rem" }}>
+              {/* ChartComponent and TableComponent accept external `data` prop if provided */}
+              <div style={{ marginBottom: "1rem" }}>
+                <ChartComponent
+                  data={reportResult.samples ?? (reportResult.series ? reportResult.series.map(s => ({ fecha: s.label, ph: s.value })) : [])}
+                  title={"Serie — pH"}
+                />
+              </div>
+
+              <div>
+                <TableComponent
+                  data={reportResult.rows ?? (reportResult.samples ?? []).slice(0, 10)}
+                  title={"Tabla — resultados"}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
       {actionMessage && (
         <div className="aq-table-meta" style={{ marginTop: "0.9rem" }}>
           {actionLoading ? "Procesando..." : actionMessage}
