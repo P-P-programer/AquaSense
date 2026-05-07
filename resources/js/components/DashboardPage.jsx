@@ -5,6 +5,7 @@ import AlertsPanel from "./AlertsPanel";
 import AlertPreferencesPanel from "./AlertPreferencesPanel";
 import ChartComponent from "./ChartComponent";
 import PwaInstallBanner from "./PwaInstallBanner";
+import ReportesPanel from "./ReportesPanel";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
 import api from "../services/api";
@@ -15,6 +16,11 @@ const SECTION_META = {
     icon: "bi-speedometer2",
     title: "Resumen operativo",
     subtitle: "Estado general de sensores, tendencia de pH y registros más recientes.",
+  },
+  reportes: {
+    icon: "bi-file-earmark-bar-graph",
+    title: "Reportes",
+    subtitle: "Métricas semanales, filtros de consulta y exportaciones del sistema.",
   },
   alerts: {
     icon: "bi-bell",
@@ -100,6 +106,7 @@ export default function DashboardPage() {
   const sections = useMemo(() => {
     const baseSections = [
       { id: "overview", icon: "bi-speedometer2", label: "Resumen" },
+      { id: "reportes", icon: "bi-file-earmark-bar-graph", label: "Reportes" },
       { id: "alerts", icon: "bi-bell", label: "Alertas" },
     ];
 
@@ -294,6 +301,12 @@ export default function DashboardPage() {
                 <ChartComponent />
                 <TableComponent />
               </div>
+            </section>
+          )}
+
+          {activeSection === "reportes" && (
+            <section className="aq-section-view">
+              <ReportesPanel />
             </section>
           )}
 

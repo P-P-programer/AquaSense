@@ -51,24 +51,24 @@ export default function StatsComponent() {
         </div>
       )}
 
-      {/* Turbidez — solo si el backend lo envía */}
-      {stats.turbidez != null && (
+      {/* Promedio semanal de pH */}
+      {stats.promedio_semanal_ph != null && (
         <div className="aq-stat-card">
-          <span className="aq-stat-label"><i className="bi bi-water"></i> Turbidez</span>
-          <span className="aq-stat-value">{stats.turbidez}</span>
-          <span className="aq-stat-unit">NTU</span>
+          <span className="aq-stat-label"><i className="bi bi-graph-up"></i> pH semanal</span>
+          <span className="aq-stat-value">{stats.promedio_semanal_ph}</span>
+          <span className="aq-stat-unit">promedio de los últimos 7 días</span>
           <span className="aq-stat-indicator ok">
             <i className="bi bi-check-circle-fill"></i> Dentro del rango
           </span>
         </div>
       )}
 
-      {/* Temperatura — solo si el backend lo envía */}
-      {stats.temperatura != null && (
+      {/* Dispositivos activos */}
+      {stats.dispositivos_activos != null && (
         <div className="aq-stat-card">
-          <span className="aq-stat-label"><i className="bi bi-thermometer-half"></i> Temperatura</span>
-          <span className="aq-stat-value">{stats.temperatura}</span>
-          <span className="aq-stat-unit">°C</span>
+          <span className="aq-stat-label"><i className="bi bi-router"></i> Dispositivos activos</span>
+          <span className="aq-stat-value">{stats.dispositivos_activos}</span>
+          <span className="aq-stat-unit">registrados como activos</span>
           <span className="aq-stat-indicator ok">
             <i className="bi bi-check-circle-fill"></i> Normal
           </span>
