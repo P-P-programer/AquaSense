@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\UserAlertPreferenceController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
+use App\Http\Controllers\Api\ReportesController;
 use App\Http\Controllers\Api\RfidAccessController;
 use App\Http\Controllers\Api\CityController;
 use App\Models\User;
@@ -89,9 +90,10 @@ Route::middleware('web')->group(function () {
         Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
         Route::get('/push/status', [PushSubscriptionController::class, 'status']);
         
-        // Reports (aggregations and exports)
-        Route::post('/reports/query', [\App\Http\Controllers\Api\ReportsController::class, 'query']);
-        Route::post('/reports/export', [\App\Http\Controllers\Api\ReportsController::class, 'export']);
+        // Reportes (agregaciones y exportes)
+        Route::post('/reportes/query', [ReportesController::class, 'query']);
+        Route::post('/reportes/export', [ReportesController::class, 'export']);
+        Route::post('/reportes/ia/resumen', [ReportesController::class, 'iaResumen']);
     });
 
     Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {

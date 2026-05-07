@@ -293,6 +293,24 @@ const api = {
   unsubscribeFromPush: (payload) => api.post("/push/unsubscribe", payload),
   getPushStatus: () => api.get("/push/status"),
 
+  // Reportes
+  getReportes: (params = {}) => {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        query.set(key, String(value));
+      }
+    });
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return api.get(`/reportes${suffix}`);
+  },
+  consultarReportes: (payload) => api.post("/reportes/query", payload),
+  exportarReportes: (payload) => api.post("/reportes/export", payload),
+  resumenIaReportes: (payload) => api.post("/reportes/ia/resumen", payload),
+
   // Connectivity Settings
   getConnectivitySettings: (deviceId) => api.get(`/admin/devices/${deviceId}/connectivity-settings`),
   updateConnectivitySettings: (deviceId, payload) => api.patch(`/admin/devices/${deviceId}/connectivity-settings`, payload),
