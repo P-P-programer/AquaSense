@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\City;
 use App\Models\Device;
 use App\Models\DeviceLocation;
 use App\Models\DeviceToken;
@@ -19,6 +20,18 @@ use Illuminate\Validation\ValidationException;
 
 class DeviceIngestController extends Controller
 {
+    /**
+     * Precisión máxima (en metros) para confiar en datos de geocoding.
+     * 
+     * Por debajo de este umbral, el servicio de geocodificación inversa proporciona
+     * una ubicación lo suficientemente confiable para asignar a la ciudad.
+     * Por encima, se utiliza la ciudad predeterminada del dispositivo (fallback).
+     * 
+     * Justificación: 100m es aproximadamente una manzana de ciudad estándar,
+     * suficiente para identificar correctamente la ciudad en la mayoría de casos.
+     */
+    private const MAX_GEOCODING_ACCURACY_METERS = 100;
+
     public function __construct(
         private readonly ReverseGeocodingService $reverseGeocodingService,
         private readonly AlertEvaluatorService $alertEvaluatorService,
@@ -77,8 +90,19 @@ class DeviceIngestController extends Controller
                 ? Carbon::parse($validated['captured_at'])
                 : now();
 
+            // Resolver city_id: priorizar geocoding si es confiable, sino usar device.city_id
+            $resolvedCityId = null;
+            if ($locationPayload && isset($locationPayload['meta']['city'])) {
+                $resolvedCityId = $this->resolveCityFromGeocodingMeta(
+                    $locationPayload['meta'],
+                    $locationPayload['accuracy_m']
+                );
+            }
+            $cityId = $resolvedCityId ?? ($deviceToken->device->city_id ?? null);
+
             $registro = Registro::create([
                 'device_id' => $deviceToken->device_id,
+                'city_id' => $cityId,
                 'captured_at' => $capturedAt,
                 'ph' => $validated['ph'] ?? null,
                 'consumo' => $validated['consumo'] ?? 0,
@@ -246,6 +270,44 @@ class DeviceIngestController extends Controller
         }
 
         return 'ok';
+    }
+
+    /**
+     * Resuelve meta.city (texto del geocoding) → cities.id
+     * 
+     * Busca la city en BD por nombre + país con confianza basada en accuracy_m.
+     * Si accuracy_m > MAX_GEOCODING_ACCURACY_METERS, considera poco confiable y devuelve null.
+     */
+    private function resolveCityFromGeocodingMeta(?array $meta, ?int $accuracyM): ?int
+    {
+        if (!$meta || !isset($meta['city'])) {
+            return null;
+        }
+
+        // Si la precisión es baja (> MAX_GEOCODING_ACCURACY_METERS), no confiar en geocoding
+        if ($accuracyM !== null && $accuracyM > self::MAX_GEOCODING_ACCURACY_METERS) {
+            return null;
+        }
+
+        $cityName = trim($meta['city'] ?? '');
+        $country = trim($meta['country'] ?? 'Colombia');
+        $department = trim($meta['department'] ?? '');
+
+        if (!$cityName) {
+            return null;
+        }
+
+        $query = City::query()
+            ->where('name', $cityName)
+            ->where('country', $country);
+
+        if ($department) {
+            $query->where('department', $department);
+        }
+
+        $city = $query->first();
+
+        return $city?->id;
     }
 
     private function haversineMeters(float $lat1, float $lng1, float $lat2, float $lng2): float

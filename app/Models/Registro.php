@@ -11,6 +11,7 @@ class Registro extends Model
 
     protected $fillable = [
         'device_id',
+        'city_id',
         'captured_at',
         'ph',
         'consumo',

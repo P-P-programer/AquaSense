@@ -132,10 +132,10 @@ export default function ChartComponent({ data: externalData = null, title = null
     .reverse()
     .map((row, index) => ({
       x: index,
-      y: Number(row.ph ?? 0),
-      label: row.fecha,
-      city: row.city_name ?? "Sin ciudad",
-      device: row.device_name ?? "—",
+      y: Number(row.ph ?? row.value ?? 0),
+      label: row.fecha ?? row.label ?? "—",
+      city: row.city_name ?? row.city ?? "—",
+      device: row.device_name ?? row.device ?? "—",
     }));
 
   const rawMax = points.length ? Math.max(...points.map((point) => point.y)) : 0;
