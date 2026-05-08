@@ -123,6 +123,10 @@ PROMPT;
             $query->where('device_id', $filtros['device_id']);
         }
 
+        if (!empty($filtros['city_id'])) {
+            $query->where('city_id', $filtros['city_id']);
+        }
+
         // Group by the same expression used for label to satisfy ONLY_FULL_GROUP_BY
         $query->groupBy(DB::raw($labelExpr))->orderBy('label');
 
@@ -147,6 +151,7 @@ PROMPT;
                 'mensaje' => 'Consulta de reportes ejecutada',
                 'filtros' => $filtros,
                 'granularity' => $granularity,
+                'dataType' => 'aggregated', // Indicador explícito para detección robusta de tipo en frontend
             ],
             'series' => $series,
             'rows' => $rows,

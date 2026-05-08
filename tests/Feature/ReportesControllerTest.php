@@ -17,7 +17,7 @@ class ReportesControllerTest extends TestCase
         $response->assertJsonStructure([
             'meta' => ['mensaje', 'filtros'],
             'series',
-            'resumen',
+            'rows',
         ]);
     }
 

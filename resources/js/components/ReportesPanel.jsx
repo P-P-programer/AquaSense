@@ -3,15 +3,36 @@ import api from "../services/api";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
 
+// Mapeo de granularidad a etiquetas en español
+const GRANULARITY_LABELS = {
+  day: "diarios",
+  week: "semanales",
+  month: "mensuales",
+  year: "anuales",
+};
+
+const GRANULARITY_SINGULAR = {
+  day: "diario",
+  week: "semanal",
+  month: "mensual",
+  year: "anual",
+};
+
 export default function ReportesPanel() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-  const [filtrosBase] = useState({
+  const [devices, setDevices] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [filtros, setFiltros] = useState({
     metric: "ph",
     granularity: "week",
+    start: "",
+    end: "",
+    device_id: "",
+    city_id: "",
   });
   const [reportResult, setReportResult] = useState(null);
 
@@ -20,6 +41,14 @@ export default function ReportesPanel() {
       .then((data) => setStats(data))
       .catch((err) => setError(err.message ?? "No se pudieron cargar los reportes."))
       .finally(() => setLoading(false));
+
+    api.getAdminDevices()
+      .then((d) => setDevices(Array.isArray(d) ? d : []))
+      .catch(() => setDevices([]));
+
+    api.getCities()
+      .then((c) => setCities(Array.isArray(c) ? c : []))
+      .catch(() => setCities([]));
   }, []);
 
   if (loading) {
@@ -44,13 +73,37 @@ export default function ReportesPanel() {
   async function ejecutarConsulta() {
     setActionLoading("consulta");
     setActionMessage(null);
+    setReportResult(null);
 
     try {
-      const response = await api.consultarReportes(filtrosBase);
-      setReportResult(response ?? null);
-      setActionMessage(response?.meta?.mensaje ?? "Consulta de reportes lista.");
+      // Construir payload omitiendo campos vacíos
+      const payload = {
+        metric: filtros.metric || "ph",
+        granularity: filtros.granularity || "week",
+      };
+      if (filtros.start) payload.start = filtros.start;
+      if (filtros.end) payload.end = filtros.end;
+      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
+      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
+
+      const response = await api.consultarReportes(payload);
+      
+      // Verificar si hay datos en la respuesta
+      const hasData = response?.series && response.series.length > 0;
+      
+      if (!hasData) {
+        setActionMessage("⚠️ No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.");
+        setReportResult(null);
+      } else {
+        setReportResult(response ?? null);
+        const selectedCity = cities.find(c => c.id === parseInt(filtros.city_id))?.name || "todas";
+        const selectedDevice = devices.find(d => d.id === parseInt(filtros.device_id))?.name || "todos";
+        const granularityLabel = GRANULARITY_LABELS[filtros.granularity] || "datos";
+        setActionMessage(`✓ Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`);
+      }
     } catch (err) {
-      setActionMessage(err.message ?? "No se pudo consultar el reporte.");
+      setActionMessage(`❌ Error: ${err.message ?? "No se pudo consultar el reporte."}`);
+      setReportResult(null);
     } finally {
       setActionLoading(null);
     }
@@ -61,15 +114,21 @@ export default function ReportesPanel() {
     setActionMessage(null);
 
     try {
-      const response = await api.exportarReportes({
-        ...filtrosBase,
+      const payload = {
+        metric: filtros.metric || "ph",
         format: formato,
-        include_images: true,
-      });
+        granularity: filtros.granularity || "week",
+      };
+      if (filtros.start) payload.start = filtros.start;
+      if (filtros.end) payload.end = filtros.end;
+      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
+      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
 
-      setActionMessage(response?.mensaje ?? `Exportación ${formato.toUpperCase()} preparada.`);
+      const response = await api.exportarReportes(payload);
+      const formatLabel = formato === "xlsx" ? "Excel" : "Word";
+      setActionMessage(`✓ Exportación ${formatLabel} preparada. ${response?.mensaje ?? ""}`);
     } catch (err) {
-      setActionMessage(err.message ?? "No se pudo preparar la exportación.");
+      setActionMessage(`❌ Error en exportación: ${err.message ?? "No se pudo preparar la exportación."}`);
     } finally {
       setActionLoading(null);
     }
@@ -80,10 +139,19 @@ export default function ReportesPanel() {
     setActionMessage(null);
 
     try {
-      const response = await api.resumenIaReportes(filtrosBase);
-      setActionMessage(response?.mensaje ?? "Resumen con IA preparado.");
+      const payload = {
+        metric: filtros.metric || "ph",
+        granularity: filtros.granularity || "week",
+      };
+      if (filtros.start) payload.start = filtros.start;
+      if (filtros.end) payload.end = filtros.end;
+      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
+      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
+
+      const response = await api.resumenIaReportes(payload);
+      setActionMessage(`✓ Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`);
     } catch (err) {
-      setActionMessage(err.message ?? "No se pudo generar el resumen IA.");
+      setActionMessage(`❌ Error al generar resumen: ${err.message ?? "No se pudo generar el resumen IA."}`);
     } finally {
       setActionLoading(null);
     }
@@ -132,9 +200,100 @@ export default function ReportesPanel() {
             Consultas preparadas
           </div>
           <p className="aq-table-meta" style={{ marginTop: 0 }}>
-            Aquí vivirán los filtros de periodo, métrica y entidad. Esta será la vista para consultar reportes sin salir del módulo.
+            Ajusta los filtros de periodo, métrica, dispositivo y ciudad para consultar reportes.
           </p>
-          <div className="aq-table-meta">Posición: arriba del bloque de métricas, alineado con exportaciones e IA.</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem", marginTop: "0.85rem" }}>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Métrica
+              </label>
+              <select
+                className="aq-input"
+                value={filtros.metric}
+                onChange={(e) => setFiltros({ ...filtros, metric: e.target.value })}
+              >
+                <option value="ph">pH</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Granularidad
+              </label>
+              <select
+                className="aq-input"
+                value={filtros.granularity}
+                onChange={(e) => setFiltros({ ...filtros, granularity: e.target.value })}
+              >
+                <option value="day">Diario</option>
+                <option value="week">Semanal</option>
+                <option value="month">Mensual</option>
+                <option value="year">Anual</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Desde (fecha)
+              </label>
+              <input
+                type="date"
+                className="aq-input"
+                value={filtros.start}
+                onChange={(e) => setFiltros({ ...filtros, start: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Hasta (fecha)
+              </label>
+              <input
+                type="date"
+                className="aq-input"
+                value={filtros.end}
+                onChange={(e) => setFiltros({ ...filtros, end: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Dispositivo
+              </label>
+              <select
+                className="aq-input"
+                value={filtros.device_id}
+                onChange={(e) => setFiltros({ ...filtros, device_id: e.target.value })}
+              >
+                <option value="">Todos</option>
+                {devices.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.identifier})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Ciudad
+              </label>
+              <select
+                className="aq-input"
+                value={filtros.city_id}
+                onChange={(e) => setFiltros({ ...filtros, city_id: e.target.value })}
+              >
+                <option value="">Todas</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <button
             type="button"
             className="aq-btn-secondary"
@@ -142,7 +301,7 @@ export default function ReportesPanel() {
             onClick={ejecutarConsulta}
             disabled={actionLoading !== null}
           >
-            {actionLoading === "consulta" ? "Consultando..." : "Probar consulta"}
+            {actionLoading === "consulta" ? "Consultando..." : "Ejecutar consulta"}
           </button>
         </section>
 
@@ -196,7 +355,7 @@ export default function ReportesPanel() {
         </section>
       </div>
 
-      {reportResult && (
+      {reportResult && reportResult.series && reportResult.series.length > 0 && (
         <div style={{ marginTop: "1rem" }}>
           <section className="aq-panel">
             <div className="aq-panel-title">
@@ -207,15 +366,27 @@ export default function ReportesPanel() {
               {/* ChartComponent and TableComponent accept external `data` prop if provided */}
               <div style={{ marginBottom: "1rem" }}>
                 <ChartComponent
-                  data={reportResult.samples ?? (reportResult.series ? reportResult.series.map(s => ({ fecha: s.label, ph: s.value })) : [])}
-                  title={"Serie — pH"}
+                  data={reportResult.series.map((s, idx) => ({ 
+                    fecha: s.label, 
+                    ph: s.value,
+                    index: idx
+                  }))}
+                  title={`Gráfica — ${filtros.metric.toUpperCase()} ${GRANULARITY_SINGULAR[filtros.granularity] || ""}`}
                 />
               </div>
 
               <div>
                 <TableComponent
-                  data={reportResult.rows ?? (reportResult.samples ?? []).slice(0, 10)}
-                  title={"Tabla — resultados"}
+                  data={reportResult.rows?.map((r, idx) => ({
+                    id: idx,
+                    label: r.label,
+                    avg: r.avg,
+                    min: r.min,
+                    max: r.max,
+                    count: r.count,
+                    dataType: reportResult.meta?.dataType || "aggregated" // Usar indicador de tipo de la API
+                  })) ?? []}
+                  title={`Tabla — ${filtros.metric.toUpperCase()} por período`}
                 />
               </div>
             </div>
@@ -223,8 +394,25 @@ export default function ReportesPanel() {
         </div>
       )}
       {actionMessage && (
-        <div className="aq-table-meta" style={{ marginTop: "0.9rem" }}>
-          {actionLoading ? "Procesando..." : actionMessage}
+        <div style={{
+          marginTop: "0.9rem",
+          padding: "0.8rem 1rem",
+          borderRadius: "8px",
+          backgroundColor: actionMessage.startsWith("❌") ? "rgba(239, 68, 68, 0.1)" :
+                           actionMessage.startsWith("✓") ? "rgba(34, 197, 94, 0.1)" :
+                           actionMessage.startsWith("⚠️") ? "rgba(251, 146, 60, 0.1)" : 
+                           "rgba(59, 130, 246, 0.1)",
+          borderLeft: `4px solid ${actionMessage.startsWith("❌") ? "#ef4444" :
+                                   actionMessage.startsWith("✓") ? "#22c55e" :
+                                   actionMessage.startsWith("⚠️") ? "#fb923c" :
+                                   "#3b82f6"}`,
+          color: actionMessage.startsWith("❌") ? "#991b1b" :
+                 actionMessage.startsWith("✓") ? "#15803d" :
+                 actionMessage.startsWith("⚠️") ? "#92400e" :
+                 "#1e40af",
+          fontSize: "0.9rem"
+        }}>
+          {actionLoading ? "⏳ Procesando..." : actionMessage}
         </div>
       )}
     </section>

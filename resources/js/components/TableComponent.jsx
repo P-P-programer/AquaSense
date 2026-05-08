@@ -145,37 +145,65 @@ export default function TableComponent({ data: externalData = null, title = null
       </div>
       {!data.length ? (
         <div className="aq-empty-state">
-          No hay lecturas para el filtro actual. Puedes cambiar la ciudad o escribir otra opción sin perder los controles.
+          No hay datos para mostrar. Intenta ajustar los filtros.
         </div>
       ) : (
-        <table className="aq-table aq-registros-table">
-          <thead>
-            <tr>
-              <th>Fecha y hora</th>
-              <th>Ciudad</th>
-              <th>Dispositivo</th>
-              <th>pH</th>
-              <th>Turbidez</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((r, i) => (
-              <tr key={i}>
-                <td data-label="Fecha y hora">{r.fecha}</td>
-                <td data-label="Ciudad">{r.city_name ?? "Sin ciudad"}</td>
-                <td data-label="Dispositivo">{r.device_name ?? "—"}</td>
-                <td data-label="pH">{r.ph ?? "—"}</td>
-                <td data-label="Turbidez">{r.turbidez != null ? `${r.turbidez} NTU` : "—"}</td>
-                <td data-label="Estado">
-                  <span className={`aq-badge ${r.estado ?? "ok"}`}>
-                    {estadoLabel[r.estado] ?? "Normal"}
-                  </span>
-                </td>
+        // Usar indicador explícito de tipo si está disponible, sino asumir basándose en estructura
+        (data[0]?.dataType === "aggregated" || (!data[0]?.dataType && data[0]?.avg !== undefined)) ? (
+          // Tabla de datos agregados (desde ReportesService)
+          <table className="aq-table aq-registros-table">
+            <thead>
+              <tr>
+                <th>Período</th>
+                <th>Promedio</th>
+                <th>Mínimo</th>
+                <th>Máximo</th>
+                <th>Muestras</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((r, i) => (
+                <tr key={i}>
+                  <td data-label="Período">{r.label ?? r.fecha ?? "—"}</td>
+                  <td data-label="Promedio" style={{ fontWeight: 600 }}>{r.avg ?? "—"}</td>
+                  <td data-label="Mínimo">{r.min ?? "—"}</td>
+                  <td data-label="Máximo">{r.max ?? "—"}</td>
+                  <td data-label="Muestras" style={{ textAlign: "center" }}>{r.count ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          // Tabla de registros individuales (vista normal)
+          <table className="aq-table aq-registros-table">
+            <thead>
+              <tr>
+                <th>Fecha y hora</th>
+                <th>Ciudad</th>
+                <th>Dispositivo</th>
+                <th>pH</th>
+                <th>Turbidez</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((r, i) => (
+                <tr key={i}>
+                  <td data-label="Fecha y hora">{r.fecha}</td>
+                  <td data-label="Ciudad">{r.city_name ?? "Sin ciudad"}</td>
+                  <td data-label="Dispositivo">{r.device_name ?? "—"}</td>
+                  <td data-label="pH">{r.ph ?? "—"}</td>
+                  <td data-label="Turbidez">{r.turbidez != null ? `${r.turbidez} NTU` : "—"}</td>
+                  <td data-label="Estado">
+                    <span className={`aq-badge ${r.estado ?? "ok"}`}>
+                      {estadoLabel[r.estado] ?? "Normal"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
       )}
     </div>
   );
