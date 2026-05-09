@@ -31,7 +31,7 @@ function toShortTimeLabel(value) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ChartComponent({ data: externalData = null, title = null, limit = 10 }) {
+export default function ChartComponent({ data: externalData = null, title = null, limit = 10, resultFiltros = null, setResultFiltros = null, onRunQuery = null, onExport = null, onIa = null, devices = [] }) {
   const [data,  setData]  = useState(Array.isArray(externalData) ? externalData.slice(0, limit) : []);
   const [cities, setCities] = useState([]);
   const [safeRange, setSafeRange] = useState({ safeMin: null, safeMax: null });
@@ -40,6 +40,16 @@ export default function ChartComponent({ data: externalData = null, title = null
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  // local copy of filters for inline controls
+  const [localFilters, setLocalFilters] = useState(resultFiltros ?? {
+    metric: "ph",
+    granularity: "week",
+    start: "",
+    end: "",
+    device_id: "",
+    city_id: "",
+  });
+  const [showInlineFilters, setShowInlineFilters] = useState(false);
 
   const selectedCity = useMemo(
     () => cities.find((city) => String(city.id) === String(cityFilter)) ?? null,
@@ -60,6 +70,10 @@ export default function ChartComponent({ data: externalData = null, title = null
       setLoading(false);
       setError(null);
       setData(externalData.slice(0, limit));
+      // Reset city filter when external data is present (data is already filtered)
+      setCityFilter("");
+      setCityQuery("");
+      setShowSuggestions(false);
       return;
     }
 
@@ -75,6 +89,11 @@ export default function ChartComponent({ data: externalData = null, title = null
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [cityFilter, externalData, limit]);
+
+  // Mantener sincronizada la copia local de filtros si cambian desde el padre
+  useEffect(() => {
+    if (resultFiltros) setLocalFilters(resultFiltros);
+  }, [resultFiltros]);
 
   useEffect(() => {
     api.getCities()
@@ -106,12 +125,14 @@ export default function ChartComponent({ data: externalData = null, title = null
     setCityFilter(String(city.id));
     setCityQuery(`${city.name} (${city.department})`);
     setShowSuggestions(false);
+    setLocalFilters((prev) => ({ ...prev, city_id: city.id }));
   }
 
   function clearCityFilter() {
     setCityFilter("");
     setCityQuery("");
     setShowSuggestions(false);
+    setLocalFilters((prev) => ({ ...prev, city_id: "" }));
   }
 
   if (error) return (
@@ -209,6 +230,79 @@ export default function ChartComponent({ data: externalData = null, title = null
         <i className="bi bi-bar-chart-fill"></i>
         {title ?? `Tendencia de pH — últimos ${limit} registros`}
       </div>
+
+      {/* Inline result filters and quick actions (applies when parent provides handlers) */}
+      {(onRunQuery || onExport || onIa || resultFiltros) && (
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.6rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="date"
+              className="aq-input"
+              value={localFilters.start || ""}
+              onChange={(e) => setLocalFilters((p) => ({ ...p, start: e.target.value }))}
+              style={{ width: 150 }}
+            />
+            <input
+              type="date"
+              className="aq-input"
+              value={localFilters.end || ""}
+              onChange={(e) => setLocalFilters((p) => ({ ...p, end: e.target.value }))}
+              style={{ width: 150 }}
+            />
+            <select
+              className="aq-input"
+              value={localFilters.device_id || ""}
+              onChange={(e) => setLocalFilters((p) => ({ ...p, device_id: e.target.value }))}
+            >
+              <option value="">Todos dispositivos</option>
+              {devices.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <select
+              className="aq-input"
+              value={localFilters.granularity || "week"}
+              onChange={(e) => setLocalFilters((p) => ({ ...p, granularity: e.target.value }))}
+            >
+              <option value="day">Diario</option>
+              <option value="week">Semanal</option>
+              <option value="month">Mensual</option>
+              <option value="year">Anual</option>
+            </select>
+            <button
+              type="button"
+              className="aq-btn"
+              onClick={() => {
+                if (setResultFiltros) setResultFiltros(localFilters);
+                if (onRunQuery) onRunQuery(localFilters);
+              }}
+            >
+              Aplicar filtros
+            </button>
+          </div>
+
+          <div style={{ marginLeft: "auto", display: "flex", gap: "0.4rem" }}>
+            <button
+              type="button"
+              className="aq-btn-secondary"
+              onClick={() => onExport ? onExport("xlsx", localFilters) : null}
+            >Exportar Excel</button>
+            <button
+              type="button"
+              className="aq-btn-secondary"
+              onClick={() => onExport ? onExport("docx", localFilters) : null}
+            >Exportar Word</button>
+            <button
+              type="button"
+              className="aq-btn-secondary"
+              onClick={() => onIa ? onIa(localFilters) : null}
+            >Resumen IA</button>
+          </div>
+        </div>
+      )}
+
+      {/* Only show city filter when NO external data is present (Chart/Table used independently) */}
+      {!Array.isArray(externalData) && (
       <div className="aq-alerts-filters" style={{ marginBottom: "0.65rem" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
           <input
@@ -267,6 +361,7 @@ export default function ChartComponent({ data: externalData = null, title = null
           Limpiar filtro
         </button>
       </div>
+      )}
       {!data.length ? (
         <div className="aq-empty-state">
           No hay lecturas para el filtro actual. Puedes cambiar ciudad o búsqueda sin perder los controles.
