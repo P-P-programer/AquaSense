@@ -8,6 +8,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Mail\SetPasswordEmail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -45,7 +48,6 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
             'role' => ['required', Rule::in(['admin', 'user'])],
             'is_active' => ['nullable', 'boolean'],
             'alerts_notify_email' => ['nullable', 'boolean'],
@@ -57,11 +59,16 @@ class UserController extends Controller
             'ph_critical_max' => ['nullable', 'numeric', 'between:0,14'],
         ]);
 
+        // Generar token de reset para que el usuario establezca su contraseña
+        $resetToken = Str::random(60);
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
+            'password' => Hash::make(Str::random(32)), // Contraseña temporal, no usada
             'role' => $data['role'],
+                        'password_reset_token' => $resetToken,
+                        'password_reset_expires_at' => now()->addHours(24),
             // Sprint 3: los usuarios nuevos inician pendientes hasta verificar correo y activación admin.
             'is_active' => false,
             'alerts_notify_email' => $data['alerts_notify_email'] ?? true,
@@ -73,7 +80,9 @@ class UserController extends Controller
             'ph_critical_max' => $data['ph_critical_max'] ?? null,
         ]);
 
-        $user->sendEmailVerificationNotification();
+        // Enviar email para establecer contraseña
+        $resetUrl = url("/auth/set-password/{$resetToken}");
+        Mail::to($user->email)->send(new SetPasswordEmail($user->name, $resetToken, $resetUrl));
 
         $user->setAttribute('verification_status', $this->resolveVerificationStatus($user));
 

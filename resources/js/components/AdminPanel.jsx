@@ -427,8 +427,8 @@ export default function AdminPanel() {
         await api.updateAdminUser(userForm.id, payload);
         setSuccess("Usuario actualizado correctamente.");
       } else {
-        await api.createAdminUser({ ...payload, password: userForm.password });
-        setSuccess("Usuario creado correctamente.");
+        await api.createAdminUser(payload);
+        setSuccess("Usuario creado correctamente. Se envió un correo para establecer la contraseña.");
       }
 
       await loadAll();
@@ -605,8 +605,19 @@ export default function AdminPanel() {
                 <input className="aq-input" type="email" value={userForm.email} onChange={(e) => setUserForm((cur) => ({ ...cur, email: e.target.value }))} required />
               </div>
               <div>
-                <label className="aq-input-label">Contraseña {userForm.id ? "(opcional)" : ""}</label>
-                <input className="aq-input" type="password" minLength={userForm.id ? 0 : 8} value={userForm.password} onChange={(e) => setUserForm((cur) => ({ ...cur, password: e.target.value }))} placeholder={userForm.id ? "Dejar vacío para no cambiar" : "Mínimo 8 caracteres"} required={!userForm.id} />
+                <label className="aq-input-label">Contraseña</label>
+                {userForm.id ? (
+                  <input
+                    className="aq-input"
+                    type="password"
+                    minLength={8}
+                    value={userForm.password}
+                    onChange={(e) => setUserForm((cur) => ({ ...cur, password: e.target.value }))}
+                    placeholder="Dejar vacío para no cambiar"
+                  />
+                ) : (
+                  <div className="aq-table-meta">Al crear un usuario no es necesario establecer contraseña. Se enviará un correo para que el usuario la establezca.</div>
+                )}
               </div>
               <div>
                 <label className="aq-input-label">Rol</label>

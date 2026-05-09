@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Api\Admin\DeviceController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Admin\DeviceTokenController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\ConnectivitySettingsController;
@@ -31,6 +32,8 @@ Route::middleware('web')->group(function () {
     // Email Verification (public signed link + resend by email)
     Route::get('/email/verify/{id}/{hash}', function (Request $request, int $id, string $hash) {
         $user = User::findOrFail($id);
+
+    
 
         if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return response()->json([
@@ -69,6 +72,11 @@ Route::middleware('web')->group(function () {
             'resent' => true,
         ]);
     })->middleware('throttle:6,1')->name('verification.send');
+
+    // Password Setup (public POST endpoint used by the Blade form)
+    Route::post('/auth/set-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('password.setup.store');
 
     Route::get('/me', function () {
         return response()->json(auth()->user());
