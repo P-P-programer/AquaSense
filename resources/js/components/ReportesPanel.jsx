@@ -35,6 +35,7 @@ export default function ReportesPanel() {
     city_id: "",
   });
   const [reportResult, setReportResult] = useState(null);
+  const [resultFiltros, setResultFiltros] = useState(filtros);
 
   useEffect(() => {
     api.getStats()
@@ -70,36 +71,43 @@ export default function ReportesPanel() {
     );
   }
 
-  async function ejecutarConsulta() {
+  // Ejecuta la consulta. Si se pasa `overrideFiltros`, usa esos en lugar del state `filtros`.
+  async function ejecutarConsulta(overrideFiltros = null) {
     setActionLoading("consulta");
     setActionMessage(null);
     setReportResult(null);
 
     try {
+      const used = {
+        ...filtros,
+        ...(overrideFiltros ?? {}),
+      };
+
       // Construir payload omitiendo campos vacíos
       const payload = {
-        metric: filtros.metric || "ph",
-        granularity: filtros.granularity || "week",
+        metric: used.metric || "ph",
+        granularity: used.granularity || "week",
       };
-      if (filtros.start) payload.start = filtros.start;
-      if (filtros.end) payload.end = filtros.end;
-      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
-      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
+      if (used.start) payload.start = used.start;
+      if (used.end) payload.end = used.end;
+      if (used.device_id) payload.device_id = parseInt(used.device_id);
+      if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.consultarReportes(payload);
-      
-      // Verificar si hay datos en la respuesta
+
       const hasData = response?.series && response.series.length > 0;
-      
+
       if (!hasData) {
         setActionMessage("⚠️ No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.");
         setReportResult(null);
       } else {
         setReportResult(response ?? null);
-        const selectedCity = cities.find(c => c.id === parseInt(filtros.city_id))?.name || "todas";
-        const selectedDevice = devices.find(d => d.id === parseInt(filtros.device_id))?.name || "todos";
-        const granularityLabel = GRANULARITY_LABELS[filtros.granularity] || "datos";
+        const selectedCity = cities.find(c => c.id === parseInt(used.city_id))?.name || "todas";
+        const selectedDevice = devices.find(d => d.id === parseInt(used.device_id))?.name || "todos";
+        const granularityLabel = GRANULARITY_LABELS[used.granularity] || "datos";
         setActionMessage(`✓ Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`);
+        // sincronizar los filtros principales con los usados en la consulta
+        setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
       }
     } catch (err) {
       setActionMessage(`❌ Error: ${err.message ?? "No se pudo consultar el reporte."}`);
@@ -109,20 +117,22 @@ export default function ReportesPanel() {
     }
   }
 
-  async function ejecutarExportacion(formato) {
+  // Exportación con filtros opcionales
+  async function ejecutarExportacion(formato, overrideFiltros = null) {
     setActionLoading(`export-${formato}`);
     setActionMessage(null);
 
     try {
+      const used = overrideFiltros ?? filtros;
       const payload = {
-        metric: filtros.metric || "ph",
+        metric: used.metric || "ph",
         format: formato,
-        granularity: filtros.granularity || "week",
+        granularity: used.granularity || "week",
       };
-      if (filtros.start) payload.start = filtros.start;
-      if (filtros.end) payload.end = filtros.end;
-      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
-      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
+      if (used.start) payload.start = used.start;
+      if (used.end) payload.end = used.end;
+      if (used.device_id) payload.device_id = parseInt(used.device_id);
+      if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.exportarReportes(payload);
       const formatLabel = formato === "xlsx" ? "Excel" : "Word";
@@ -134,19 +144,21 @@ export default function ReportesPanel() {
     }
   }
 
-  async function ejecutarResumenIa() {
+  // Resumen IA con filtros opcionales
+  async function ejecutarResumenIa(overrideFiltros = null) {
     setActionLoading("ia");
     setActionMessage(null);
 
     try {
+      const used = overrideFiltros ?? filtros;
       const payload = {
-        metric: filtros.metric || "ph",
-        granularity: filtros.granularity || "week",
+        metric: used.metric || "ph",
+        granularity: used.granularity || "week",
       };
-      if (filtros.start) payload.start = filtros.start;
-      if (filtros.end) payload.end = filtros.end;
-      if (filtros.device_id) payload.device_id = parseInt(filtros.device_id);
-      if (filtros.city_id) payload.city_id = parseInt(filtros.city_id);
+      if (used.start) payload.start = used.start;
+      if (used.end) payload.end = used.end;
+      if (used.device_id) payload.device_id = parseInt(used.device_id);
+      if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.resumenIaReportes(payload);
       setActionMessage(`✓ Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`);
@@ -305,54 +317,7 @@ export default function ReportesPanel() {
           </button>
         </section>
 
-        <section className="aq-panel" style={{ minHeight: "100%" }}>
-          <div className="aq-panel-title">
-            <i className="bi bi-download"></i>
-            Exportaciones
-          </div>
-          <p className="aq-table-meta" style={{ marginTop: 0 }}>
-            El botón de exportar quedará aquí para generar Excel o Word con los datos filtrados y las gráficas incluidas.
-          </p>
-          <div className="aq-table-meta">Posición: a la derecha de las consultas, antes del resumen IA.</div>
-          <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", marginTop: "0.85rem" }}>
-            <button
-              type="button"
-              className="aq-btn-secondary"
-              onClick={() => ejecutarExportacion("xlsx")}
-              disabled={actionLoading !== null}
-            >
-              {actionLoading === "export-xlsx" ? "Generando XLSX..." : "Exportar Excel"}
-            </button>
-            <button
-              type="button"
-              className="aq-btn-secondary"
-              onClick={() => ejecutarExportacion("docx")}
-              disabled={actionLoading !== null}
-            >
-              {actionLoading === "export-docx" ? "Generando Word..." : "Exportar Word"}
-            </button>
-          </div>
-        </section>
 
-        <section className="aq-panel" style={{ minHeight: "100%" }}>
-          <div className="aq-panel-title">
-            <i className="bi bi-robot"></i>
-            Resumen con IA
-          </div>
-          <p className="aq-table-meta" style={{ marginTop: 0 }}>
-            La IA leerá el mismo filtro de consulta y devolverá un resumen textual corto con picos, promedios y hallazgos.
-          </p>
-          <div className="aq-table-meta">Posición: último bloque visible del módulo, para no mezclarlo con las métricas base.</div>
-          <button
-            type="button"
-            className="aq-btn-secondary"
-            style={{ marginTop: "0.85rem" }}
-            onClick={ejecutarResumenIa}
-            disabled={actionLoading !== null}
-          >
-            {actionLoading === "ia" ? "Analizando..." : "Generar resumen IA"}
-          </button>
-        </section>
       </div>
 
       {reportResult && reportResult.series && reportResult.series.length > 0 && (
@@ -372,7 +337,13 @@ export default function ReportesPanel() {
                     index: idx
                   }))}
                   title={`Gráfica — ${filtros.metric.toUpperCase()} ${GRANULARITY_SINGULAR[filtros.granularity] || ""}`}
-                />
+                  resultFiltros={resultFiltros}
+                  setResultFiltros={setResultFiltros}
+                  onRunQuery={ejecutarConsulta}
+                  onExport={ejecutarExportacion}
+                  onIa={ejecutarResumenIa}
+                  devices={devices}
+                  />
               </div>
 
               <div>
@@ -387,6 +358,12 @@ export default function ReportesPanel() {
                     dataType: reportResult.meta?.dataType || "aggregated" // Usar indicador de tipo de la API
                   })) ?? []}
                   title={`Tabla — ${filtros.metric.toUpperCase()} por período`}
+                  resultFiltros={resultFiltros}
+                  setResultFiltros={setResultFiltros}
+                  onRunQuery={ejecutarConsulta}
+                  onExport={ejecutarExportacion}
+                  onIa={ejecutarResumenIa}
+                  devices={devices}
                 />
               </div>
             </div>
