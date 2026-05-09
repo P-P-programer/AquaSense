@@ -24,6 +24,7 @@ export default function ReportesPanel() {
   const [error, setError] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [exportDownloadUrl, setExportDownloadUrl] = useState("");
   const [devices, setDevices] = useState([]);
   const [cities, setCities] = useState([]);
   const [filtros, setFiltros] = useState({
@@ -36,6 +37,7 @@ export default function ReportesPanel() {
   });
   const [reportResult, setReportResult] = useState(null);
   const [resultFiltros, setResultFiltros] = useState(filtros);
+  const [activityId, setActivityId] = useState(null);
 
   useEffect(() => {
     api.getStats()
@@ -121,6 +123,8 @@ export default function ReportesPanel() {
   async function ejecutarExportacion(formato, overrideFiltros = null) {
     setActionLoading(`export-${formato}`);
     setActionMessage(null);
+    setExportDownloadUrl("");
+    setActivityId(null);
 
     try {
       const used = overrideFiltros ?? filtros;
@@ -136,7 +140,16 @@ export default function ReportesPanel() {
 
       const response = await api.exportarReportes(payload);
       const formatLabel = formato === "xlsx" ? "Excel" : "Word";
-      setActionMessage(`✓ Exportación ${formatLabel} preparada. ${response?.mensaje ?? ""}`);
+      const id = response?.activity_id;
+      
+      if (id) {
+        setActivityId(id);
+        // Construir URL de descarga segura
+        const downloadUrl = `/api/reportes/export/download/${id}`;
+        setExportDownloadUrl(downloadUrl);
+      }
+      
+      setActionMessage(`✓ Exportación ${formatLabel} generada.${response?.filename ? ` Archivo: ${response.filename}` : ""}`);
     } catch (err) {
       setActionMessage(`❌ Error en exportación: ${err.message ?? "No se pudo preparar la exportación."}`);
     } finally {
@@ -390,6 +403,13 @@ export default function ReportesPanel() {
           fontSize: "0.9rem"
         }}>
           {actionLoading ? "⏳ Procesando..." : actionMessage}
+          {!actionLoading && exportDownloadUrl && (
+            <div style={{ marginTop: "0.45rem" }}>
+              <a href={exportDownloadUrl} target="_blank" rel="noreferrer" className="aq-link-button">
+                Descargar archivo generado
+              </a>
+            </div>
+          )}
         </div>
       )}
     </section>

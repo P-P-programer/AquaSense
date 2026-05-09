@@ -6,6 +6,7 @@ import AlertPreferencesPanel from "./AlertPreferencesPanel";
 import ChartComponent from "./ChartComponent";
 import PwaInstallBanner from "./PwaInstallBanner";
 import ReportesPanel from "./ReportesPanel";
+import ReportHistoryPanel from "./ReportHistoryPanel";
 import TableComponent from "./TableComponent";
 import StatsComponent from "./StatsComponent";
 import api from "../services/api";
@@ -307,6 +308,9 @@ export default function DashboardPage() {
           {activeSection === "reportes" && (
             <section className="aq-section-view">
               <ReportesPanel />
+              <div style={{ marginTop: "1.5rem" }}>
+                <ReportHistoryPanel isAdmin={isAdmin()} />
+              </div>
             </section>
           )}
 

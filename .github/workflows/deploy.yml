@@ -76,7 +76,7 @@ jobs:
             cd /home/u633781435/domains/aquasense.sbs/AquaSense
             git pull origin main
             rm -f public/hot ../public_html/hot
-            composer install --no-dev --classmap-authoritative
+            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --classmap-authoritative --ignore-platform-req=ext-gd
             php artisan migrate --force
             php artisan optimize:clear
             php artisan config:cache

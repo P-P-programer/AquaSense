@@ -38,7 +38,7 @@ class ReportesController extends Controller
             'city_id' => 'nullable|integer',
         ]);
 
-        return response()->json($this->reportesService->exportar($data), 202);
+        return response()->json($this->reportesService->exportar($data));
     }
 
     public function iaResumen(Request $request)
