@@ -310,6 +310,16 @@ const api = {
   consultarReportes: (payload) => api.post("/reportes/query", payload),
   exportarReportes: (payload) => api.post("/reportes/export", payload),
   resumenIaReportes: (payload) => api.post("/reportes/ia/resumen", payload),
+  obtenerHistorialReportes: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.scope) query.set("scope", params.scope);
+    if (params.action_type) query.set("action_type", params.action_type);
+    if (params.format) query.set("format", params.format);
+    if (params.user_id) query.set("user_id", params.user_id);
+    if (params.limit) query.set("limit", params.limit);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return api.get(`/reportes/historial${suffix}`);
+  },
 
   // Connectivity Settings
   getConnectivitySettings: (deviceId) => api.get(`/admin/devices/${deviceId}/connectivity-settings`),

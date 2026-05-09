@@ -10,7 +10,9 @@
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
-        "minishlink/web-push": "^9"
+        "minishlink/web-push": "^9",
+        "phpoffice/phpspreadsheet": "^5.7",
+        "phpoffice/phpword": "^1.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

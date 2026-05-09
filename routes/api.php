@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RegistrosController;
 use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\Api\ReportesController;
+use App\Http\Controllers\Api\ReportHistoryController;
 use App\Http\Controllers\Api\RfidAccessController;
 use App\Http\Controllers\Api\CityController;
 use App\Models\User;
@@ -94,6 +95,8 @@ Route::middleware('web')->group(function () {
         Route::post('/reportes/query', [ReportesController::class, 'query']);
         Route::post('/reportes/export', [ReportesController::class, 'export']);
         Route::post('/reportes/ia/resumen', [ReportesController::class, 'iaResumen']);
+        Route::get('/reportes/historial', [ReportHistoryController::class, 'index']);
+        Route::get('/reportes/export/download/{activityId}', [ReportHistoryController::class, 'downloadExport']);
     });
 
     Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
