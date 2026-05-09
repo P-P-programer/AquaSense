@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'ph_safe_max',
         'ph_critical_min',
         'ph_critical_max',
+        'password_reset_token',
+        'password_reset_expires_at',
     ];
 
     protected $hidden = [
