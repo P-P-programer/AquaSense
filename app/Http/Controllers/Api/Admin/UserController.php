@@ -82,7 +82,7 @@ class UserController extends Controller
 
         // Enviar email para establecer contraseña
         $resetUrl = url("/auth/set-password/{$resetToken}");
-        Mail::to($user->email)->send(new SetPasswordEmail($user->name, $resetToken, $resetUrl));
+        Mail::to($user->email)->queue(new SetPasswordEmail($user->name, $resetToken, $resetUrl));
 
         $user->setAttribute('verification_status', $this->resolveVerificationStatus($user));
 
@@ -120,6 +120,27 @@ class UserController extends Controller
         $freshUser->setAttribute('verification_status', $this->resolveVerificationStatus($freshUser));
 
         return response()->json($freshUser);
+    }
+
+    /**
+     * Re-send the set-password email with a fresh token.
+     */
+    public function resendSetPassword(User $user): JsonResponse
+    {
+        $resetToken = Str::random(60);
+
+        $user->update([
+            'password_reset_token' => $resetToken,
+            'password_reset_expires_at' => now()->addHours(24),
+        ]);
+
+        $resetUrl = url("/auth/set-password/{$resetToken}");
+        Mail::to($user->email)->queue(new SetPasswordEmail($user->name, $resetToken, $resetUrl));
+
+        return response()->json([
+            'message' => 'Correo de establecimiento de contraseña enviado.',
+            'resent' => true,
+        ]);
     }
 
     private function resolveVerificationStatus(User $user): string

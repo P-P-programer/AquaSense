@@ -112,6 +112,7 @@ Route::middleware('web')->group(function () {
         Route::post('/admin/users', [UserController::class, 'store']);
         Route::get('/admin/users/{user}', [UserController::class, 'show']);
         Route::patch('/admin/users/{user}', [UserController::class, 'update']);
+        Route::post('/admin/users/{user}/resend-set-password', [UserController::class, 'resendSetPassword']);
 
         Route::get('/admin/devices', [DeviceController::class, 'index']);
         Route::post('/admin/devices', [DeviceController::class, 'store']);

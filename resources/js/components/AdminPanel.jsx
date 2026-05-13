@@ -536,6 +536,24 @@ export default function AdminPanel() {
     }
   }
 
+  async function resendSetPasswordForUser(userId) {
+    if (!confirm('¿Reenviar correo de establecimiento de contraseña a este usuario?')) return;
+
+    setSaving(true);
+    setError(null);
+    setSuccess("");
+
+    try {
+      await api.resendAdminUserSetPassword(userId);
+      setSuccess('Se envió el correo para establecer la contraseña.');
+      await loadAll();
+    } catch (err) {
+      setError(err.message ?? 'No se pudo reenviar el correo.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const onlineCount = devices.filter((device) => isOnline(device.last_seen_at)).length;
   const activeDevicesCount = devices.filter((device) => Boolean(device.is_active)).length;
   const inactiveDevicesCount = devices.length - activeDevicesCount;
@@ -691,6 +709,16 @@ export default function AdminPanel() {
                     <td data-label="Acciones">
                       <button type="button" className="aq-link-button" onClick={() => editUser(user)}>Editar</button>
                       <button type="button" className="aq-link-button" onClick={() => setSelectedAuditUserId(user.id)}>Auditar</button>
+                      {getVerificationState(user).label === "pendiente" && (
+                        <button
+                          type="button"
+                          className="aq-link-button"
+                          onClick={() => resendSetPasswordForUser(user.id)}
+                          disabled={saving}
+                        >
+                          Reenviar correo
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
