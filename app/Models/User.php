@@ -47,6 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'ph_safe_max' => 'float',
             'ph_critical_min' => 'float',
             'ph_critical_max' => 'float',
+            'password_reset_expires_at' => 'datetime',
         ];
     }
 

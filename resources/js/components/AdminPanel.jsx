@@ -545,7 +545,7 @@ export default function AdminPanel() {
 
     try {
       await api.resendAdminUserSetPassword(userId);
-      setSuccess('Se envió el correo para establecer la contraseña.');
+      setSuccess('Correo de establecimiento de contraseña encolado. Debe salir en el próximo ciclo del cron.');
       await loadAll();
     } catch (err) {
       setError(err.message ?? 'No se pudo reenviar el correo.');

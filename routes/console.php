@@ -20,9 +20,9 @@ Artisan::command('alerts:check-offline', function (AlertEvaluatorService $alertE
         ->whereNotNull('last_seen_at')
         ->get();
 
-    foreach ($devices as $device) {
+    $devices->each(function (Device $device) use ($alertEvaluatorService, $offlineAfterMinutes) {
         $alertEvaluatorService->evaluateOffline($device, $offlineAfterMinutes);
-    }
+    });
 
     $this->info(sprintf('Offline check completado. Dispositivos verificados: %d', $devices->count()));
 })->purpose('Evalúa alertas de dispositivos sin heartbeat (legacy).');
@@ -31,3 +31,8 @@ Schedule::command('alerts:check-offline')->everyMinute();
 
 // Nuevo: verificar dispositivos con connectivity_alerts_enabled ON
 Schedule::command('aquasense:evaluate-connectivity', ['--offline-after-minutes' => 5])->everyMinute();
+
+// Procesar la cola cada minuto para correos y otros jobs pendientes.
+Schedule::command('queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping();
