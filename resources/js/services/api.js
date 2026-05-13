@@ -278,6 +278,7 @@ const api = {
   getAdminUsers: () => api.get("/admin/users"),
   createAdminUser: (payload) => api.post("/admin/users", payload),
   updateAdminUser: (userId, payload) => api.patch(`/admin/users/${userId}`, payload),
+  resendAdminUserSetPassword: (userId) => api.post(`/admin/users/${userId}/resend-set-password`),
 
   getAdminDevices: () => api.get("/admin/devices"),
   createAdminDevice: (payload) => api.post("/admin/devices", payload),
