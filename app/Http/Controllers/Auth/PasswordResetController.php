@@ -45,9 +45,20 @@ class PasswordResetController extends Controller
             'password_reset_expires_at' => null,
         ]);
 
-        return response()->json([
-            'message' => 'Contraseña establecida correctamente. Ya puedes iniciar sesión.',
-            'success' => true,
-        ]);
+        // Marcar correo verificado automáticamente ya que el usuario accedió al enlace enviado al email
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new \Illuminate\Auth\Events\Verified($user));
+        }
+
+        // Si la petición espera JSON (API/fetch), responder JSON; si no, mostrar una vista bonita HTML
+        if ($request->wantsJson() || $request->isJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Contraseña establecida correctamente. Ya puedes iniciar sesión.',
+                'success' => true,
+            ]);
+        }
+
+        return view('auth.set-password-success', ['email' => $user->email]);
     }
 }
