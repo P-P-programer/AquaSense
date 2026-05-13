@@ -31,8 +31,3 @@ Schedule::command('alerts:check-offline')->everyMinute();
 
 // Nuevo: verificar dispositivos con connectivity_alerts_enabled ON
 Schedule::command('aquasense:evaluate-connectivity', ['--offline-after-minutes' => 5])->everyMinute();
-
-// Procesar la cola cada minuto para correos y otros jobs pendientes.
-Schedule::command('queue:work database --stop-when-empty --max-time=55 --sleep=3 --tries=3')
-    ->everyMinute()
-    ->withoutOverlapping();
