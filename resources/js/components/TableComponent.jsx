@@ -243,11 +243,13 @@ export default function TableComponent({ data: externalData = null, title = null
         // Usar indicador explícito de tipo si está disponible, sino asumir basándose en estructura
         (data[0]?.dataType === "aggregated" || (!data[0]?.dataType && data[0]?.avg !== undefined)) ? (
           // Tabla de datos agregados (desde ReportesService)
-          <table className="aq-table aq-registros-table">
+          <div className="aq-table-responsive">
+            <table className="aq-table aq-registros-table">
             <thead>
               <tr>
                 <th>Período</th>
                 <th>Promedio</th>
+                <th>Estado</th>
                 <th>Mínimo</th>
                 <th>Máximo</th>
                 <th>Muestras</th>
@@ -257,14 +259,27 @@ export default function TableComponent({ data: externalData = null, title = null
               {data.map((r, i) => (
                 <tr key={i}>
                   <td data-label="Período">{r.label ?? r.fecha ?? "—"}</td>
-                  <td data-label="Promedio" style={{ fontWeight: 600 }}>{r.avg ?? "—"}</td>
+                  <td data-label="Promedio" style={{ fontWeight: 600 }}>
+                    {r.avg ?? "—"}
+                  </td>
+                  <td data-label="Estado">
+                    <span
+                      className={r.is_anomaly ? "aq-anomaly-badge" : "aq-anomaly-badge aq-anomaly-badge--normal"}
+                      title={r.is_anomaly
+                        ? `${r.anomaly_reason ?? 'Anomalía detectada'}${r.anomaly_score ? ` — score: ${r.anomaly_score}` : ''}`
+                        : 'Serie normal, sin picos detectados.'}
+                    >
+                      {r.is_anomaly ? 'ANOMALÍA' : 'NORMAL'}
+                    </span>
+                  </td>
                   <td data-label="Mínimo">{r.min ?? "—"}</td>
                   <td data-label="Máximo">{r.max ?? "—"}</td>
                   <td data-label="Muestras" style={{ textAlign: "center" }}>{r.count ?? 0}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         ) : (
           // Tabla de registros individuales (vista normal)
           <table className="aq-table aq-registros-table">

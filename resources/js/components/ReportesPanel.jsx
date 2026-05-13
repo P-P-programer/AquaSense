@@ -361,15 +361,19 @@ export default function ReportesPanel() {
 
               <div>
                 <TableComponent
-                  data={reportResult.rows?.map((r, idx) => ({
-                    id: idx,
-                    label: r.label,
-                    avg: r.avg,
-                    min: r.min,
-                    max: r.max,
-                    count: r.count,
-                    dataType: reportResult.meta?.dataType || "aggregated" // Usar indicador de tipo de la API
-                  })) ?? []}
+                    data={reportResult.rows?.map((r, idx) => ({
+                      id: idx,
+                      label: r.label,
+                      avg: r.avg,
+                      min: r.min,
+                      max: r.max,
+                      count: r.count,
+                      // Anomaly fields added by backend
+                      is_anomaly: r.is_anomaly ?? false,
+                      anomaly_score: r.anomaly_score ?? null,
+                      anomaly_reason: r.anomaly_reason ?? null,
+                      dataType: reportResult.meta?.dataType || "aggregated" // Usar indicador de tipo de la API
+                    })) ?? []}
                   title={`Tabla — ${filtros.metric.toUpperCase()} por período`}
                   resultFiltros={resultFiltros}
                   setResultFiltros={setResultFiltros}
