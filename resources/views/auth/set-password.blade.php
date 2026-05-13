@@ -4,107 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Establecer Contraseña - AquaSense</title>
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css','resources/css/aquasense.css'])
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        body { background: var(--fondo); }
         .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            max-width: 400px;
+            max-width: 480px;
             width: 100%;
+            background: var(--blanco);
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: var(--sombra);
+            border: 1px solid var(--borde);
         }
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo h1 {
-            color: #667eea;
-            font-size: 24px;
-            margin: 0;
-        }
-        .logo p {
-            color: #666;
-            font-size: 14px;
-            margin: 5px 0 0 0;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .password-hint {
-            font-size: 12px;
-            color: #999;
-            margin-top: 5px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        button:hover {
-            transform: translateY(-2px);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        .error-message {
-            color: #e74c3c;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-        }
-        .success-message {
-            color: #27ae60;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-        }
-        .info-box {
-            background: #f0f4ff;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #333;
-            margin-bottom: 25px;
-        }
-        .loading {
-            display: none;
-        }
+        .logo h1 { color: var(--azul-institucional); margin:0; }
+        .logo p { color: var(--texto-secundario); margin:4px 0 0 0; font-size:0.92rem }
+        label { display:block; margin-bottom:6px; color:var(--texto-primario); font-weight:600 }
+        .form-group { margin-bottom:16px }
+        input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--borde); font-size:0.95rem }
+        input:focus { outline: none; box-shadow: 0 6px 18px rgba(10,40,90,0.06); border-color: var(--azul-agua) }
+        .password-hint { font-size:0.82rem; color:var(--texto-secundario); margin-top:6px }
+        .btn-primary { width:100%; padding:12px 14px; border-radius:10px; background: linear-gradient(90deg,var(--azul-institucional),var(--azul-agua)); color:var(--blanco); border:none; font-weight:700; font-size:1rem }
+        .error-message { color: var(--alerta-danger); font-size:0.95rem; margin-top:10px; display:none }
+        .success-message { color: var(--alerta-ok); font-size:0.95rem; margin-top:10px; display:none }
+        .info-box { background: var(--azul-claro); border-left:4px solid var(--azul-agua); padding:12px; border-radius:8px; margin-bottom:18px }
+        .loading { display:none }
     </style>
 </head>
 <body>
@@ -139,8 +62,8 @@
                 <input type="password" id="password_confirmation" name="password_confirmation" required>
             </div>
 
-            <button type="submit">
-                <span id="buttonText">Establecer Contraseña</span>
+            <button type="submit" class="btn-primary">
+                <span id="buttonText">Establecer contraseña y verificar correo</span>
                 <span id="buttonLoading" class="loading">Procesando...</span>
             </button>
 

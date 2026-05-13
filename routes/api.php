@@ -33,11 +33,17 @@ Route::middleware('web')->group(function () {
     Route::get('/email/verify/{id}/{hash}', function (Request $request, int $id, string $hash) {
         $user = User::findOrFail($id);
 
-    
-
         if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-            return response()->json([
-                'message' => 'El enlace de verificación no es válido.',
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json([
+                    'message' => 'El enlace de verificación no es válido.',
+                ], 403);
+            }
+
+            return response()->view('auth.verification-notice', [
+                'title' => 'Enlace inválido',
+                'message' => 'El enlace de verificación no es válido o expiró. Solicita uno nuevo desde el inicio de sesión.',
+                'type' => 'error',
             ], 403);
         }
 
@@ -46,9 +52,17 @@ Route::middleware('web')->group(function () {
             event(new Verified($user));
         }
 
-        return response()->json([
-            'message' => 'Correo verificado correctamente. Ya puedes iniciar sesión cuando el administrador active tu cuenta.',
-            'verified' => true,
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json([
+                'message' => 'Correo verificado correctamente. Ya puedes iniciar sesión cuando el administrador active tu cuenta.',
+                'verified' => true,
+            ]);
+        }
+
+        return response()->view('auth.verification-notice', [
+            'title' => 'Correo verificado',
+            'message' => 'Tu correo se verificó correctamente. Ya puedes iniciar sesión cuando el administrador active tu cuenta.',
+            'type' => 'success',
         ]);
     })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
 
@@ -67,9 +81,19 @@ Route::middleware('web')->group(function () {
             $user->sendEmailVerificationNotification();
         }
 
-        return response()->json([
-            'message' => 'Si la cuenta existe y está pendiente, enviamos un nuevo correo de verificación.',
-            'resent' => true,
+        $message = 'Si la cuenta existe y está pendiente, enviamos un nuevo correo de verificación.';
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'resent' => true,
+            ]);
+        }
+
+        return response()->view('auth.verification-notice', [
+            'title' => 'Solicitud procesada',
+            'message' => $message,
+            'type' => 'info',
         ]);
     })->middleware('throttle:6,1')->name('verification.send');
 
