@@ -20,7 +20,7 @@ class ReportesControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            'meta' => ['mensaje', 'filtros'],
+            'meta' => ['mensaje', 'filtros', 'trend', 'anomaly_count'],
             'series',
             'rows',
         ]);

@@ -38,6 +38,11 @@ Formato sugerido:
 4. Recomendación breve.
 PROMPT;
 
+    public function __construct(
+        private readonly PeakDetectionService $peakDetectionService = new PeakDetectionService(),
+    ) {
+    }
+
     public function consultar(array $filtros): array
     {
         $metric = $filtros['metric'] ?? 'ph';
@@ -48,6 +53,8 @@ PROMPT;
                 'meta' => [
                     'mensaje' => 'Métrica no soportada aún',
                     'filtros' => $filtros,
+                    'trend' => 'flat',
+                    'anomaly_count' => 0,
                 ],
                 'series' => [],
                 'rows' => [],
@@ -106,6 +113,8 @@ PROMPT;
                     'mensaje' => 'Consulta de reportes ejecutada (sin datos: tabla registros ausente)',
                     'filtros' => $filtros,
                     'granularity' => $granularity,
+                    'trend' => 'flat',
+                    'anomaly_count' => 0,
                 ],
                 'series' => [],
                 'rows' => [],
@@ -155,12 +164,27 @@ PROMPT;
             $rows[] = ['label' => $label, 'avg' => $avg, 'min' => $min, 'max' => $max, 'count' => $count];
         }
 
+        $analysis = $this->peakDetectionService->enrichRows($rows, [
+            'window' => $filtros['anomaly_window'] ?? 5,
+            'zscore_threshold' => $filtros['anomaly_zscore_threshold'] ?? 2.5,
+            'min_samples' => $filtros['anomaly_min_samples'] ?? 5,
+            'absolute_spike_threshold' => $filtros['anomaly_absolute_threshold'] ?? 0.5,
+        ]);
+
+        $rows = $analysis['rows'];
+        $summary = $analysis['summary'];
+
         return [
             'meta' => [
                 'mensaje' => 'Consulta de reportes ejecutada',
                 'filtros' => $filtros,
                 'granularity' => $granularity,
                 'dataType' => 'aggregated', // Indicador explícito para detección robusta de tipo en frontend
+                'trend' => $summary['trend'] ?? 'flat',
+                'anomaly_count' => $summary['anomaly_count'] ?? 0,
+                'anomaly_window' => $summary['window'] ?? 5,
+                'anomaly_zscore_threshold' => $summary['zscore_threshold'] ?? 2.5,
+                'anomaly_min_samples' => $summary['min_samples'] ?? 5,
             ],
             'series' => $series,
             'rows' => $rows,
