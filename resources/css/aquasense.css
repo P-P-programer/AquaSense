@@ -795,7 +795,7 @@ body {
 .aq-badge.warn   { background: #fef3c7; color: #92400e; }
 .aq-badge.danger { background: #fee2e2; color: #991b1b; }
 
-/* Compact anomaly badge used in report tables */
+/* ── Reportes: tabla expandible y estado ───────────────── */
 .aq-anomaly-badge {
   display: inline-flex;
   align-items: center;
@@ -807,9 +807,24 @@ body {
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
+  border: none;
+  cursor: pointer;
+  appearance: none;
+  text-decoration: none;
+}
+
+.aq-report-status-trigger.aq-anomaly-badge {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+  color: white;
 }
 
 .aq-anomaly-badge--normal {
+  background: #e8f5e9;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.aq-report-status-trigger.aq-anomaly-badge--normal {
   background: #e8f5e9;
   color: #166534;
   border: 1px solid #bbf7d0;
@@ -821,6 +836,155 @@ body {
   gap: 10px;
   flex-wrap: wrap;
   margin-left: 4px;
+}
+
+.aq-report-status-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.aq-report-status-trigger i {
+  color: var(--texto-secundario);
+  font-size: 0.78rem;
+}
+
+.aq-report-value {
+  display: inline-block;
+}
+
+.aq-report-detail-row td {
+  background: #f7fbff;
+  border-bottom: 1px solid var(--borde);
+  padding: 0.9rem 1rem 1rem;
+}
+
+.aq-report-row.is-expanded td {
+  background: rgba(14, 165, 233, 0.06);
+}
+
+.aq-report-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.aq-report-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.aq-report-detail-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--azul-profundo);
+}
+
+.aq-report-detail-subtitle {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--texto-secundario);
+}
+
+.aq-report-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.aq-report-detail-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 0.75rem 0.8rem;
+  min-width: 0;
+}
+
+.aq-report-detail-card span {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-secundario);
+  margin-bottom: 0.25rem;
+}
+
+.aq-report-detail-card strong {
+  display: block;
+  color: var(--texto-primario);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.aq-report-mini-chart {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 0.75rem 0.8rem 0.85rem;
+}
+
+.aq-report-mini-chart-note {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--texto-secundario);
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d8e7f8;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.aq-report-mini-chart-note strong {
+  color: var(--azul-profundo);
+}
+
+.aq-report-mini-chart-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  color: var(--texto-secundario);
+}
+
+.aq-report-mini-chart-legend-item {
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.aq-report-mini-chart-legend-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--azul-profundo);
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.aq-report-mini-chart-legend-item small {
+  display: block;
+  font-size: 0.67rem;
+  line-height: 1.35;
+  color: var(--texto-secundario);
+}
+
+.aq-report-mini-chart-canvas {
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef7ff 100%);
 }
 
 .aq-registros-table th:nth-child(1),
@@ -844,12 +1008,16 @@ body {
 .aq-registros-table th:nth-child(7),
 .aq-registros-table td:nth-child(7) { width: 8%; text-align: center; }
 
-/* ensure anomaly badge doesn't cause column wrapping on small screens */
+/* Responsive helpers for the report accordion/table */
 @media (max-width: 480px) {
   .aq-anomaly-badge { padding: 2px 5px; font-size: 0.68rem; }
+  .aq-report-detail-grid { grid-template-columns: 1fr 1fr; }
+  .aq-report-detail-header { flex-direction: column; }
+  .aq-report-mini-chart-canvas { height: 170px; }
+  .aq-report-mini-chart-legend { grid-template-columns: 1fr; }
 }
 
-/* ── Chart (pH) ─────────────────────────── */
+/* ── Reportes: gráfico principal (pH) ─────────────────── */
 .aq-linechart-shell {
   display: flex;
   flex-direction: column;
@@ -1585,7 +1753,6 @@ body {
 
   .aq-welcome-icons { flex-direction: column; gap: 1rem; }
   .aq-stats-grid { grid-template-columns: 1fr 1fr; }
-  .aq-linechart-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aq-linechart-canvas { height: 250px; }
   .aq-admin-grid { grid-template-columns: 1fr; }
   .aq-admin-form-grid { grid-template-columns: 1fr; }
