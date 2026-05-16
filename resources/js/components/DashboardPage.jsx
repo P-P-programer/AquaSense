@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [feedback, setFeedback] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [resolvingAlertId, setResolvingAlertId] = useState(null);
@@ -292,11 +293,19 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <PwaInstallBanner />
+        {feedback && (
+          <div className={`aq-panel-feedback ${feedback.type === "error" ? "is-error" : "is-success"}`} role="status" aria-live="polite">
+            {feedback.message}
+            <button type="button" className="aq-link-button" onClick={() => setFeedback(null)}>
+              Cerrar
+            </button>
+          </div>
+        )}
 
         <main className="aq-content-shell">
           {activeSection === "overview" && (
             <section className="aq-section-view">
+              <PwaInstallBanner />
               <StatsComponent />
               <div className="aq-overview-grid">
                 <ChartComponent />
@@ -323,7 +332,7 @@ export default function DashboardPage() {
 
           {activeSection === "admin" && isAdmin() && (
             <section className="aq-section-view">
-              <AdminPanel />
+              <AdminPanel onFeedback={setFeedback} />
             </section>
           )}
         </main>
