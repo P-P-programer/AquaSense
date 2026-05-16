@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import LoginPage from "./components/LoginPage";
 import WelcomePage from "./components/WelcomePage";
 import DashboardPage from "./components/DashboardPage";
@@ -41,8 +42,10 @@ function AppRouter() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
