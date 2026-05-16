@@ -11,17 +11,36 @@ class RegistrosController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
         $validated = $request->validate([
             'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'search' => ['nullable', 'string', 'max:120'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
+        $allowedDeviceIds = $user?->isAdmin() ? null : $user?->devices()->pluck('id')->all();
+
+        if (is_array($allowedDeviceIds) && empty($allowedDeviceIds)) {
+            return response()->json([]);
+        }
+
+        if (! empty($validated['city_id']) && is_array($allowedDeviceIds)) {
+            $cityDeviceIds = $user->devices()
+                ->where('city_id', (int) $validated['city_id'])
+                ->pluck('id')
+                ->all();
+
+            $allowedDeviceIds = array_values(array_intersect($allowedDeviceIds, $cityDeviceIds));
+        }
+
         $rows = Registro::query()
             ->with([
                 'device:id,city_id,name,identifier',
                 'device.city:id,name,department',
             ])
+            ->when(is_array($allowedDeviceIds), function ($query) use ($allowedDeviceIds) {
+                $query->whereIn('device_id', $allowedDeviceIds);
+            })
             ->when(! empty($validated['city_id']), function ($query) use ($validated) {
                 $query->whereHas('device', function ($deviceQuery) use ($validated) {
                     $deviceQuery->where('city_id', (int) $validated['city_id']);

@@ -23,7 +23,7 @@ class ReportesController extends Controller
             'city_id' => 'nullable|integer',
         ]);
 
-        return response()->json($this->reportesService->consultar($data));
+        return response()->json($this->reportesService->consultar($data, $request->user()));
     }
 
     public function export(Request $request)
@@ -38,7 +38,7 @@ class ReportesController extends Controller
             'city_id' => 'nullable|integer',
         ]);
 
-        return response()->json($this->reportesService->exportar($data));
+        return response()->json($this->reportesService->exportar($data, $request->user()));
     }
 
     public function iaResumen(Request $request)
@@ -52,6 +52,6 @@ class ReportesController extends Controller
             'city_id' => 'nullable|integer',
         ]);
 
-        return response()->json($this->reportesService->generarResumenIa($data));
+        return response()->json($this->reportesService->generarResumenIa($data, $request->user()));
     }
 }

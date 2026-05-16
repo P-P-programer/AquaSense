@@ -1124,6 +1124,18 @@ body {
   font-size: 0.85rem;
 }
 
+.aq-alert-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #fbbf24;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  font-size: 0.85rem;
+}
+
 .aq-panel-feedback {
   margin: 0 1.3rem 1rem;
   padding: 0.8rem 0.95rem;

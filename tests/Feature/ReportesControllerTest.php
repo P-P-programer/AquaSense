@@ -2,14 +2,94 @@
 
 namespace Tests\Feature;
 
+use App\Models\City;
+use App\Models\Device;
+use App\Models\Registro;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ReportesControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function createScopedReportData(): array
+    {
+        $city = City::create([
+            'name' => 'Ibagué',
+            'department' => 'Tolima',
+            'country' => 'Colombia',
+            'dane_code' => 73001,
+            'latitude' => 4.4389,
+            'longitude' => -75.2322,
+            'description' => 'Ciudad de prueba',
+        ]);
+
+        $otherCity = City::create([
+            'name' => 'Espinal',
+            'department' => 'Tolima',
+            'country' => 'Colombia',
+            'dane_code' => 73268,
+            'latitude' => 4.1497,
+            'longitude' => -74.8840,
+            'description' => 'Ciudad de prueba 2',
+        ]);
+
+        $user = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $otherUser = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $ownDevice = Device::create([
+            'user_id' => $user->id,
+            'city_id' => $city->id,
+            'name' => 'ESP32 Propio',
+            'identifier' => 'own-device-'.str()->uuid()->toString(),
+            'is_active' => true,
+            'last_seen_at' => now(),
+        ]);
+
+        $otherDevice = Device::create([
+            'user_id' => $otherUser->id,
+            'city_id' => $otherCity->id,
+            'name' => 'ESP32 Ajeno',
+            'identifier' => 'other-device-'.str()->uuid()->toString(),
+            'is_active' => true,
+            'last_seen_at' => now(),
+        ]);
+
+        return compact('city', 'otherCity', 'user', 'otherUser', 'ownDevice', 'otherDevice');
+    }
+
+    private function seedScopedReportRows(array $data): void
+    {
+        Registro::create([
+            'device_id' => $data['ownDevice']->id,
+            'city_id' => $data['city']->id,
+            'captured_at' => Carbon::now()->subHour(),
+            'ph' => 6.50,
+            'consumo' => 12.5,
+            'estado' => 'ok',
+            'source' => 'test',
+        ]);
+
+        Registro::create([
+            'device_id' => $data['otherDevice']->id,
+            'city_id' => $data['otherCity']->id,
+            'captured_at' => Carbon::now()->subMinutes(30),
+            'ph' => 9.50,
+            'consumo' => 50.0,
+            'estado' => 'ok',
+            'source' => 'test',
+        ]);
+    }
 
     public function test_query_returns_reportes_payload()
     {
@@ -30,7 +110,10 @@ class ReportesControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $user = User::factory()->create();
+        $data = $this->createScopedReportData();
+        $this->seedScopedReportRows($data);
+
+        $user = $data['user'];
 
         $response = $this->actingAs($user)->postJson('/api/reportes/export', [
             'metric' => 'ph',
@@ -56,7 +139,10 @@ class ReportesControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $user = User::factory()->create();
+        $data = $this->createScopedReportData();
+        $this->seedScopedReportRows($data);
+
+        $user = $data['user'];
 
         $response = $this->actingAs($user)->postJson('/api/reportes/export', [
             'metric' => 'ph',
@@ -97,10 +183,10 @@ class ReportesControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $user = User::factory()->create([
-            'role' => 'user',
-            'email_verified_at' => now(),
-        ]);
+        $data = $this->createScopedReportData();
+        $this->seedScopedReportRows($data);
+
+        $user = $data['user'];
 
         $this->actingAs($user);
 
@@ -124,14 +210,14 @@ class ReportesControllerTest extends TestCase
     {
         Storage::fake('public');
 
+        $data = $this->createScopedReportData();
+        $this->seedScopedReportRows($data);
+
         $admin = User::factory()->create([
             'role' => 'admin',
             'email_verified_at' => now(),
         ]);
-        $user = User::factory()->create([
-            'role' => 'user',
-            'email_verified_at' => now(),
-        ]);
+        $user = $data['user'];
 
         $this->actingAs($user)->postJson('/api/reportes/export', [
             'metric' => 'ph',
@@ -148,5 +234,34 @@ class ReportesControllerTest extends TestCase
         $history->assertOk();
         $history->assertJsonPath('meta.scope', 'all');
         $history->assertJsonPath('meta.count', 2);
+    }
+
+    public function test_normal_user_only_sees_assigned_device_data_in_reports()
+    {
+        $data = $this->createScopedReportData();
+        $this->seedScopedReportRows($data);
+
+        $user = $data['user'];
+        $ownDevice = $data['ownDevice'];
+
+        $stats = $this->actingAs($user)->getJson('/api/stats');
+        $stats->assertOk();
+        $stats->assertJsonPath('dispositivos_activos', 1);
+        $stats->assertJsonPath('ph_actual', '6.50');
+
+        $registros = $this->actingAs($user)->getJson('/api/registros?limit=10');
+        $registros->assertOk();
+        $registros->assertJsonCount(1);
+        $registros->assertJsonPath('0.device_id', $ownDevice->id);
+
+        $reporte = $this->actingAs($user)->postJson('/api/reportes/query', [
+            'metric' => 'ph',
+            'granularity' => 'day',
+        ]);
+
+        $reporte->assertOk();
+        $reporte->assertJsonPath('meta.restricted', true);
+        $reporte->assertJsonPath('series.0.value', 6.5);
+        $reporte->assertJsonCount(1, 'rows');
     }
 }
