@@ -28,7 +28,13 @@ export default function StatsComponent() {
     <>
       {!stats.has_registros && (
         <div className="aq-empty-state" style={{ marginBottom: "0.9rem" }}>
-          Aún no hay telemetría en producción. Conecta un dispositivo y espera la primera lectura.
+          {stats.message ?? "Aún no hay telemetría en producción. Conecta un dispositivo y espera la primera lectura."}
+        </div>
+      )}
+
+      {stats.restricted && stats.message && stats.has_registros && (
+        <div className="aq-alert-warning" style={{ marginBottom: "0.9rem" }}>
+          <i className="bi bi-exclamation-triangle"></i> {stats.message}
         </div>
       )}
 

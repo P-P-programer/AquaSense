@@ -103,7 +103,18 @@ Route::middleware('web')->group(function () {
         ->name('password.setup.store');
 
     Route::get('/me', function () {
-        return response()->json(auth()->user());
+        $user = auth()->user()?->load([
+            'devices' => fn ($query) => $query->select([
+                'id',
+                'user_id',
+                'city_id',
+                'name',
+                'identifier',
+                'is_active',
+            ])->with('city:id,name,department'),
+        ]);
+
+        return response()->json($user);
     })->middleware(['auth', 'verified'])->name('api.me');
 
     Route::middleware(['auth', 'verified'])->group(function () {

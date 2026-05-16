@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 function buildSmoothPath(points) {
@@ -32,6 +33,8 @@ function toShortTimeLabel(value) {
 }
 
 export default function ChartComponent({ data: externalData = null, title = null, limit = 10, resultFiltros = null, setResultFiltros = null, onRunQuery = null, onExport = null, onIa = null, devices = [] }) {
+  const { user } = useAuth();
+  const isAdminUser = user?.role === "admin";
   const [data,  setData]  = useState(Array.isArray(externalData) ? externalData.slice(0, limit) : []);
   const [cities, setCities] = useState([]);
   const [safeRange, setSafeRange] = useState({ safeMin: null, safeMax: null });
@@ -96,10 +99,22 @@ export default function ChartComponent({ data: externalData = null, title = null
   }, [resultFiltros]);
 
   useEffect(() => {
+    if (!isAdminUser) {
+      const assignedCities = new Map();
+      (user?.devices ?? []).forEach((device) => {
+        if (device?.city?.id && !assignedCities.has(device.city.id)) {
+          assignedCities.set(device.city.id, device.city);
+        }
+      });
+
+      setCities(Array.from(assignedCities.values()));
+      return;
+    }
+
     api.getCities()
       .then((response) => setCities(Array.isArray(response) ? response : []))
       .catch(() => setCities([]));
-  }, []);
+  }, [isAdminUser, user]);
 
   useEffect(() => {
     api.getMyAlertPreferences()
@@ -158,6 +173,18 @@ export default function ChartComponent({ data: externalData = null, title = null
       city: row.city_name ?? row.city ?? "—",
       device: row.device_name ?? row.device ?? "—",
     }));
+
+  if (!points.length) {
+    const emptyMessage = !isAdminUser && !(user?.devices?.length ?? 0)
+      ? "No tienes dispositivos asignados todavía. Contacta al administrador para ver gráficas y reportes."
+      : "Aún no hay registros suficientes para construir la gráfica.";
+
+    return (
+      <div className="aq-empty-state">
+        {emptyMessage}
+      </div>
+    );
+  }
 
   const rawMax = points.length ? Math.max(...points.map((point) => point.y)) : 0;
   const rawMin = points.length ? Math.min(...points.map((point) => point.y)) : 0;

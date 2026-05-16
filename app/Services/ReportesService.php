@@ -43,10 +43,12 @@ PROMPT;
     ) {
     }
 
-    public function consultar(array $filtros): array
+    public function consultar(array $filtros, ?User $user = null): array
     {
+        $user ??= auth()->user();
         $metric = $filtros['metric'] ?? 'ph';
         $granularity = $filtros['granularity'] ?? 'day';
+        $allowedDeviceIds = $this->allowedDeviceIds($user);
 
         if ($metric !== 'ph') {
             return [
@@ -59,6 +61,15 @@ PROMPT;
                 'series' => [],
                 'rows' => [],
             ];
+        }
+
+        if (is_array($allowedDeviceIds) && empty($allowedDeviceIds)) {
+            return $this->buildEmptyReportResponse(
+                $filtros,
+                $granularity,
+                'No tienes dispositivos asignados. Contacta al administrador para habilitar reportes y gráficas.',
+                true,
+            );
         }
 
         $driver = DB::connection()->getDriverName();
@@ -121,9 +132,26 @@ PROMPT;
             ];
         }
 
+        if (is_array($allowedDeviceIds) && ! empty($filtros['device_id'])) {
+            $requestedDeviceId = (int) $filtros['device_id'];
+
+            if (! in_array($requestedDeviceId, $allowedDeviceIds, true)) {
+                return $this->buildEmptyReportResponse(
+                    $filtros,
+                    $granularity,
+                    'El dispositivo seleccionado no pertenece a tu cuenta. Contacta al administrador si necesitas acceso a otros equipos.',
+                    true,
+                );
+            }
+        }
+
         $query = DB::table('registros')
             ->selectRaw("{$labelExpr} as label, COUNT(*) as count, AVG(ph) as avg_ph, MIN(ph) as min_ph, MAX(ph) as max_ph")
             ->whereNotNull('ph');
+
+        if (is_array($allowedDeviceIds)) {
+            $query->whereIn('device_id', $allowedDeviceIds);
+        }
 
         if (!empty($filtros['start']) && !empty($filtros['end'])) {
             $start = Carbon::parse($filtros['start'])->startOfDay()->toDateTimeString();
@@ -149,6 +177,17 @@ PROMPT;
         $query->groupBy(DB::raw($labelExpr))->orderBy('label');
 
         $results = $query->get();
+
+        if ($results->isEmpty()) {
+            return $this->buildEmptyReportResponse(
+                $filtros,
+                $granularity,
+                is_array($allowedDeviceIds)
+                    ? 'No hay registros para tus dispositivos asignados con esos filtros.'
+                    : 'No hay datos disponibles para los filtros seleccionados.',
+                is_array($allowedDeviceIds),
+            );
+        }
 
         $series = [];
         $rows = [];
@@ -185,18 +224,31 @@ PROMPT;
                 'anomaly_window' => $summary['window'] ?? 5,
                 'anomaly_zscore_threshold' => $summary['zscore_threshold'] ?? 2.5,
                 'anomaly_min_samples' => $summary['min_samples'] ?? 5,
+                'restricted' => is_array($allowedDeviceIds),
             ],
             'series' => $series,
             'rows' => $rows,
         ];
     }
 
-    public function exportar(array $filtros): array
+    public function exportar(array $filtros, ?User $user = null): array
     {
+        $user ??= auth()->user();
         $format = $filtros['format'] ?? 'xlsx';
-        $reportData = $this->consultar($filtros);
+        $reportData = $this->consultar($filtros, $user);
         $rows = $reportData['rows'] ?? [];
-        $user = auth()->user();
+
+        if (empty($rows)) {
+            return [
+                'mensaje' => $reportData['meta']['mensaje'] ?? 'No hay datos disponibles para exportar.',
+                'estado' => 'empty',
+                'formato' => $format,
+                'filtros' => $filtros,
+                'activity_id' => null,
+                'filename' => null,
+                'rows_count' => 0,
+            ];
+        }
 
         if ($format === 'docx') {
             $fileName = $this->buildExportFileName($filtros, 'docx');
@@ -253,10 +305,15 @@ PROMPT;
         ];
     }
 
-    public function generarResumenIa(array $filtros): array
+    public function generarResumenIa(array $filtros, ?User $user = null): array
     {
-        $user = auth()->user();
-        $summary = 'Resumen con IA en construcción.';
+        $user ??= auth()->user();
+        $reportData = $this->consultar($filtros, $user);
+        $summary = $reportData['meta']['mensaje'] ?? 'Resumen con IA en construcción.';
+
+        if ($summary === 'Consulta de reportes ejecutada') {
+            $summary = 'Resumen con IA en construcción.';
+        }
 
         $this->recordReportActivity(
             user: $user,
@@ -300,6 +357,35 @@ PROMPT;
         ];
 
         return implode("\n", $partes);
+    }
+
+    private function allowedDeviceIds(?User $user): ?array
+    {
+        if (! $user || $user->isAdmin()) {
+            return null;
+        }
+
+        return $user->devices()->pluck('id')->all();
+    }
+
+    private function buildEmptyReportResponse(array $filtros, string $granularity, string $message, bool $restricted): array
+    {
+        return [
+            'meta' => [
+                'mensaje' => $message,
+                'filtros' => $filtros,
+                'granularity' => $granularity,
+                'dataType' => 'aggregated',
+                'trend' => 'flat',
+                'anomaly_count' => 0,
+                'anomaly_window' => 5,
+                'anomaly_zscore_threshold' => 2.5,
+                'anomaly_min_samples' => 5,
+                'restricted' => $restricted,
+            ],
+            'series' => [],
+            'rows' => [],
+        ];
     }
 
     private function buildExportFileName(array $filtros, string $extension): string

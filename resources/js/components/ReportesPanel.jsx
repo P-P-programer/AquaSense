@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
@@ -19,6 +20,8 @@ const GRANULARITY_SINGULAR = {
 };
 
 export default function ReportesPanel() {
+  const { user } = useAuth();
+  const isAdminUser = user?.role === "admin";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,20 +42,47 @@ export default function ReportesPanel() {
   const [resultFiltros, setResultFiltros] = useState(filtros);
   const [activityId, setActivityId] = useState(null);
 
+  function normalizeDeviceList(deviceList) {
+    return Array.isArray(deviceList) ? deviceList : [];
+  }
+
+  function normalizeCityList(deviceList) {
+    const map = new Map();
+
+    normalizeDeviceList(deviceList).forEach((device) => {
+      if (device?.city?.id && !map.has(device.city.id)) {
+        map.set(device.city.id, device.city);
+      }
+    });
+
+    return Array.from(map.values());
+  }
+
   useEffect(() => {
+    setLoading(true);
+
     api.getStats()
       .then((data) => setStats(data))
       .catch((err) => setError(err.message ?? "No se pudieron cargar los reportes."))
       .finally(() => setLoading(false));
 
-    api.getAdminDevices()
-      .then((d) => setDevices(Array.isArray(d) ? d : []))
-      .catch(() => setDevices([]));
+    if (isAdminUser) {
+      api.getAdminDevices()
+        .then((d) => setDevices(Array.isArray(d) ? d : []))
+        .catch(() => setDevices([]));
 
-    api.getCities()
-      .then((c) => setCities(Array.isArray(c) ? c : []))
-      .catch(() => setCities([]));
-  }, []);
+      api.getCities()
+        .then((c) => setCities(Array.isArray(c) ? c : []))
+        .catch(() => setCities([]));
+      return;
+    }
+
+    const assignedDevices = normalizeDeviceList(user?.devices);
+    setDevices(assignedDevices);
+    setCities(normalizeCityList(assignedDevices));
+  }, [isAdminUser, user]);
+
+  const hasAssignedDevices = isAdminUser || devices.length > 0;
 
   if (loading) {
     return (
@@ -75,6 +105,12 @@ export default function ReportesPanel() {
 
   // Ejecuta la consulta. Si se pasa `overrideFiltros`, usa esos en lugar del state `filtros`.
   async function ejecutarConsulta(overrideFiltros = null) {
+    if (!isAdminUser && !hasAssignedDevices) {
+      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.");
+      setReportResult(null);
+      return;
+    }
+
     setActionLoading("consulta");
     setActionMessage(null);
     setReportResult(null);
@@ -100,7 +136,7 @@ export default function ReportesPanel() {
       const hasData = response?.series && response.series.length > 0;
 
       if (!hasData) {
-        setActionMessage("⚠️ No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.");
+        setActionMessage(response?.meta?.mensaje ? `⚠️ ${response.meta.mensaje}` : "⚠️ No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.");
         setReportResult(null);
       } else {
         setReportResult(response ?? null);
@@ -121,6 +157,11 @@ export default function ReportesPanel() {
 
   // Exportación con filtros opcionales
   async function ejecutarExportacion(formato, overrideFiltros = null) {
+    if (!isAdminUser && !hasAssignedDevices) {
+      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder exportar reportes.");
+      return;
+    }
+
     setActionLoading(`export-${formato}`);
     setActionMessage(null);
     setExportDownloadUrl("");
@@ -149,7 +190,7 @@ export default function ReportesPanel() {
         setExportDownloadUrl(downloadUrl);
       }
       
-      setActionMessage(`✓ Exportación ${formatLabel} generada.${response?.filename ? ` Archivo: ${response.filename}` : ""}`);
+      setActionMessage(response?.mensaje ?? `✓ Exportación ${formatLabel} generada.${response?.filename ? ` Archivo: ${response.filename}` : ""}`);
     } catch (err) {
       setActionMessage(`❌ Error en exportación: ${err.message ?? "No se pudo preparar la exportación."}`);
     } finally {
@@ -159,6 +200,11 @@ export default function ReportesPanel() {
 
   // Resumen IA con filtros opcionales
   async function ejecutarResumenIa(overrideFiltros = null) {
+    if (!isAdminUser && !hasAssignedDevices) {
+      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder generar resúmenes IA.");
+      return;
+    }
+
     setActionLoading("ia");
     setActionMessage(null);
 
@@ -174,7 +220,7 @@ export default function ReportesPanel() {
       if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.resumenIaReportes(payload);
-      setActionMessage(`✓ Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`);
+      setActionMessage(response?.mensaje ? `✓ ${response.mensaje}` : `✓ Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`);
     } catch (err) {
       setActionMessage(`❌ Error al generar resumen: ${err.message ?? "No se pudo generar el resumen IA."}`);
     } finally {
@@ -191,6 +237,13 @@ export default function ReportesPanel() {
       <p className="aq-table-meta" style={{ marginTop: 0 }}>
         Módulo para resúmenes semanales, filtros por periodo, exportaciones e IA.
       </p>
+
+      {!isAdminUser && !hasAssignedDevices && (
+        <div className="aq-alert-warning" style={{ marginBottom: "1rem" }}>
+          <i className="bi bi-exclamation-triangle"></i>
+          No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.
+        </div>
+      )}
 
       <div className="aq-stats-grid">
         <div className="aq-stat-card">
@@ -290,8 +343,9 @@ export default function ReportesPanel() {
                 className="aq-input"
                 value={filtros.device_id}
                 onChange={(e) => setFiltros({ ...filtros, device_id: e.target.value })}
+                disabled={!hasAssignedDevices}
               >
-                <option value="">Todos</option>
+                <option value="">{isAdminUser ? "Todos" : hasAssignedDevices ? "Todos mis dispositivos" : "Sin dispositivos"}</option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name} ({d.identifier})
@@ -308,8 +362,9 @@ export default function ReportesPanel() {
                 className="aq-input"
                 value={filtros.city_id}
                 onChange={(e) => setFiltros({ ...filtros, city_id: e.target.value })}
+                disabled={!hasAssignedDevices}
               >
-                <option value="">Todas</option>
+                <option value="">{isAdminUser ? "Todas" : hasAssignedDevices ? "Mis ciudades" : "Sin ciudades"}</option>
                 {cities.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.department})
@@ -324,7 +379,7 @@ export default function ReportesPanel() {
             className="aq-btn-secondary"
             style={{ marginTop: "0.85rem" }}
             onClick={ejecutarConsulta}
-            disabled={actionLoading !== null}
+            disabled={actionLoading !== null || (!isAdminUser && !hasAssignedDevices)}
           >
             {actionLoading === "consulta" ? "Consultando..." : "Ejecutar consulta"}
           </button>
