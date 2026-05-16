@@ -134,7 +134,7 @@ function validatePhThresholds({ safeMin, safeMax, criticalMin, criticalMax }) {
   return null;
 }
 
-export default function AdminPanel() {
+export default function AdminPanel({ onFeedback } = {}) {
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
   const [cities, setCities] = useState([]);
@@ -218,7 +218,6 @@ export default function AdminPanel() {
   async function loadAll() {
     setLoading(true);
     setError(null);
-    setSuccess("");
 
     try {
       const [usersData, devicesData, citiesData] = await Promise.all([
@@ -425,16 +424,21 @@ export default function AdminPanel() {
 
       if (userForm.id) {
         await api.updateAdminUser(userForm.id, payload);
-        setSuccess("Usuario actualizado correctamente.");
       } else {
         await api.createAdminUser(payload);
-        setSuccess("Usuario creado correctamente. Se envió un correo para establecer la contraseña.");
       }
 
       await loadAll();
+      const message = userForm.id
+        ? "Usuario actualizado correctamente."
+        : "Usuario creado correctamente. Se envió un correo para establecer la contraseña.";
+      setSuccess(message);
+      onFeedback?.({ type: "success", message });
       resetUserForm();
     } catch (err) {
-      setError(err.message ?? "No se pudo guardar el usuario.");
+      const message = err.message ?? "No se pudo guardar el usuario.";
+      setError(message);
+      onFeedback?.({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -479,16 +483,19 @@ export default function AdminPanel() {
 
       if (deviceForm.id) {
         await api.updateAdminDevice(deviceForm.id, payload);
-        setSuccess("Dispositivo actualizado correctamente.");
       } else {
         await api.createAdminDevice(payload);
-        setSuccess("Dispositivo creado correctamente.");
       }
 
       await loadAll();
+      const message = deviceForm.id ? "Dispositivo actualizado correctamente." : "Dispositivo creado correctamente.";
+      setSuccess(message);
+      onFeedback?.({ type: "success", message });
       resetDeviceForm();
     } catch (err) {
-      setError(err.message ?? "No se pudo guardar el dispositivo.");
+      const message = err.message ?? "No se pudo guardar el dispositivo.";
+      setError(message);
+      onFeedback?.({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -510,10 +517,13 @@ export default function AdminPanel() {
 
       setGeneratedToken(response);
       setTokens((current) => [response.device_token, ...current]);
-      setSuccess("Token generado correctamente.");
       e.target.reset();
+      setSuccess("Token generado correctamente.");
+      onFeedback?.({ type: "success", message: "Token generado correctamente." });
     } catch (err) {
-      setError(err.message ?? "No se pudo generar el token.");
+      const message = err.message ?? "No se pudo generar el token.";
+      setError(message);
+      onFeedback?.({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -529,8 +539,11 @@ export default function AdminPanel() {
       const freshTokens = await api.getAdminDeviceTokens(selectedDeviceId);
       setTokens(freshTokens);
       setSuccess("Token revocado correctamente.");
+      onFeedback?.({ type: "success", message: "Token revocado correctamente." });
     } catch (err) {
-      setError(err.message ?? "No se pudo revocar el token.");
+      const message = err.message ?? "No se pudo revocar el token.";
+      setError(message);
+      onFeedback?.({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -545,10 +558,14 @@ export default function AdminPanel() {
 
     try {
       await api.resendAdminUserSetPassword(userId);
-      setSuccess('Correo de establecimiento de contraseña encolado. Debe salir en el próximo ciclo del cron.');
+      const message = 'Correo de establecimiento de contraseña encolado. Debe salir en el próximo ciclo del cron.';
+      setSuccess(message);
+      onFeedback?.({ type: "success", message });
       await loadAll();
     } catch (err) {
-      setError(err.message ?? 'No se pudo reenviar el correo.');
+      const message = err.message ?? 'No se pudo reenviar el correo.';
+      setError(message);
+      onFeedback?.({ type: "error", message });
     } finally {
       setSaving(false);
     }
