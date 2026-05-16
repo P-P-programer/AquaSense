@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../services/api";
 import MapComponent from "./MapComponent";
 
@@ -134,7 +135,8 @@ function validatePhThresholds({ safeMin, safeMax, criticalMin, criticalMax }) {
   return null;
 }
 
-export default function AdminPanel({ onFeedback } = {}) {
+export default function AdminPanel() {
+  const notify = useNotifications();
   const [users, setUsers] = useState([]);
   const [devices, setDevices] = useState([]);
   const [cities, setCities] = useState([]);
@@ -151,7 +153,6 @@ export default function AdminPanel({ onFeedback } = {}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState("");
 
   const [userForm, setUserForm] = useState({
     id: null,
@@ -239,7 +240,9 @@ export default function AdminPanel({ onFeedback } = {}) {
         setDeviceLocations(locationsData);
       }
     } catch (err) {
-      setError(err.message ?? "No se pudieron cargar los datos del admin.");
+      const message = err.message ?? "No se pudieron cargar los datos del admin.";
+      setError(message);
+      notify.error(message, { title: "Admin" });
     } finally {
       setLoading(false);
     }
@@ -364,13 +367,14 @@ export default function AdminPanel({ onFeedback } = {}) {
 
     setSearchingPlace(true);
     setError(null);
-    setSuccess("");
 
     try {
       const results = await api.geocodeSearch(query);
       setPlaceResults(results);
     } catch (err) {
-      setError(err.message ?? "No se pudo buscar la ubicación.");
+      const message = err.message ?? "No se pudo buscar la ubicación.";
+      setError(message);
+      notify.error(message, { title: "Búsqueda de ubicación" });
     } finally {
       setSearchingPlace(false);
     }
@@ -398,13 +402,12 @@ export default function AdminPanel({ onFeedback } = {}) {
     const validationError = validatePhThresholds(thresholds);
     if (validationError) {
       setError(validationError);
-      setSuccess("");
+      notify.warning(validationError, { title: "Validación" });
       return;
     }
 
     setSaving(true);
     setError(null);
-    setSuccess("");
 
     try {
       const payload = {
@@ -432,13 +435,12 @@ export default function AdminPanel({ onFeedback } = {}) {
       const message = userForm.id
         ? "Usuario actualizado correctamente."
         : "Usuario creado correctamente. Se envió un correo para establecer la contraseña.";
-      setSuccess(message);
-      onFeedback?.({ type: "success", message });
+      notify.success(message, { title: "Usuarios" });
       resetUserForm();
     } catch (err) {
       const message = err.message ?? "No se pudo guardar el usuario.";
       setError(message);
-      onFeedback?.({ type: "error", message });
+      notify.error(message, { title: "Usuarios" });
     } finally {
       setSaving(false);
     }
@@ -456,13 +458,12 @@ export default function AdminPanel({ onFeedback } = {}) {
     const validationError = validatePhThresholds(thresholds);
     if (validationError) {
       setError(validationError);
-      setSuccess("");
+      notify.warning(validationError, { title: "Validación" });
       return;
     }
 
     setSaving(true);
     setError(null);
-    setSuccess("");
 
     try {
       const payload = {
@@ -489,13 +490,12 @@ export default function AdminPanel({ onFeedback } = {}) {
 
       await loadAll();
       const message = deviceForm.id ? "Dispositivo actualizado correctamente." : "Dispositivo creado correctamente.";
-      setSuccess(message);
-      onFeedback?.({ type: "success", message });
+      notify.success(message, { title: "Dispositivos" });
       resetDeviceForm();
     } catch (err) {
       const message = err.message ?? "No se pudo guardar el dispositivo.";
       setError(message);
-      onFeedback?.({ type: "error", message });
+      notify.error(message, { title: "Dispositivos" });
     } finally {
       setSaving(false);
     }
@@ -508,7 +508,6 @@ export default function AdminPanel({ onFeedback } = {}) {
     setSaving(true);
     setError(null);
     setGeneratedToken(null);
-    setSuccess("");
 
     try {
       const response = await api.createAdminDeviceToken(selectedDeviceId, {
@@ -518,12 +517,11 @@ export default function AdminPanel({ onFeedback } = {}) {
       setGeneratedToken(response);
       setTokens((current) => [response.device_token, ...current]);
       e.target.reset();
-      setSuccess("Token generado correctamente.");
-      onFeedback?.({ type: "success", message: "Token generado correctamente." });
+      notify.success("Token generado correctamente.", { title: "Tokens" });
     } catch (err) {
       const message = err.message ?? "No se pudo generar el token.";
       setError(message);
-      onFeedback?.({ type: "error", message });
+      notify.error(message, { title: "Tokens" });
     } finally {
       setSaving(false);
     }
@@ -532,18 +530,16 @@ export default function AdminPanel({ onFeedback } = {}) {
   async function revokeToken(tokenId) {
     setSaving(true);
     setError(null);
-    setSuccess("");
 
     try {
       await api.revokeAdminDeviceToken(tokenId);
       const freshTokens = await api.getAdminDeviceTokens(selectedDeviceId);
       setTokens(freshTokens);
-      setSuccess("Token revocado correctamente.");
-      onFeedback?.({ type: "success", message: "Token revocado correctamente." });
+      notify.success("Token revocado correctamente.", { title: "Tokens" });
     } catch (err) {
       const message = err.message ?? "No se pudo revocar el token.";
       setError(message);
-      onFeedback?.({ type: "error", message });
+      notify.error(message, { title: "Tokens" });
     } finally {
       setSaving(false);
     }
@@ -554,18 +550,16 @@ export default function AdminPanel({ onFeedback } = {}) {
 
     setSaving(true);
     setError(null);
-    setSuccess("");
 
     try {
       await api.resendAdminUserSetPassword(userId);
       const message = 'Correo de establecimiento de contraseña encolado. Debe salir en el próximo ciclo del cron.';
-      setSuccess(message);
-      onFeedback?.({ type: "success", message });
+      notify.success(message, { title: "Usuarios" });
       await loadAll();
     } catch (err) {
       const message = err.message ?? 'No se pudo reenviar el correo.';
       setError(message);
-      onFeedback?.({ type: "error", message });
+      notify.error(message, { title: "Usuarios" });
     } finally {
       setSaving(false);
     }
@@ -601,7 +595,6 @@ export default function AdminPanel({ onFeedback } = {}) {
       </div>
 
       {error && <div className="aq-alert-error"><i className="bi bi-exclamation-triangle"></i> {error}</div>}
-      {success && <div className="aq-alert-success"><i className="bi bi-check-circle"></i> {success}</div>}
       {loading && <div className="aq-loading"><div className="aq-spinner"></div> Cargando panel admin...</div>}
 
       <div className="aq-admin-card aq-admin-card-wide">

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../services/api";
 import ChartComponent from "./ChartComponent";
 import TableComponent from "./TableComponent";
@@ -21,13 +22,12 @@ const GRANULARITY_SINGULAR = {
 
 export default function ReportesPanel() {
   const { user } = useAuth();
+  const notify = useNotifications();
   const isAdminUser = user?.role === "admin";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [actionMessage, setActionMessage] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-  const [exportDownloadUrl, setExportDownloadUrl] = useState("");
   const [devices, setDevices] = useState([]);
   const [cities, setCities] = useState([]);
   const [filtros, setFiltros] = useState({
@@ -40,7 +40,7 @@ export default function ReportesPanel() {
   });
   const [reportResult, setReportResult] = useState(null);
   const [resultFiltros, setResultFiltros] = useState(filtros);
-  const [activityId, setActivityId] = useState(null);
+  const greetedNoDevicesRef = useRef(false);
 
   function normalizeDeviceList(deviceList) {
     return Array.isArray(deviceList) ? deviceList : [];
@@ -84,6 +84,13 @@ export default function ReportesPanel() {
 
   const hasAssignedDevices = isAdminUser || devices.length > 0;
 
+  useEffect(() => {
+    if (!isAdminUser && !hasAssignedDevices && !greetedNoDevicesRef.current) {
+      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
+      greetedNoDevicesRef.current = true;
+    }
+  }, [hasAssignedDevices, isAdminUser, notify]);
+
   if (loading) {
     return (
       <div className="aq-panel">
@@ -106,13 +113,12 @@ export default function ReportesPanel() {
   // Ejecuta la consulta. Si se pasa `overrideFiltros`, usa esos en lugar del state `filtros`.
   async function ejecutarConsulta(overrideFiltros = null) {
     if (!isAdminUser && !hasAssignedDevices) {
-      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.");
+      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
       setReportResult(null);
       return;
     }
 
     setActionLoading("consulta");
-    setActionMessage(null);
     setReportResult(null);
 
     try {
@@ -136,19 +142,19 @@ export default function ReportesPanel() {
       const hasData = response?.series && response.series.length > 0;
 
       if (!hasData) {
-        setActionMessage(response?.meta?.mensaje ? `⚠️ ${response.meta.mensaje}` : "⚠️ No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.");
+        notify.warning(response?.meta?.mensaje ?? "No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.", { title: "Reportes" });
         setReportResult(null);
       } else {
         setReportResult(response ?? null);
         const selectedCity = cities.find(c => c.id === parseInt(used.city_id))?.name || "todas";
         const selectedDevice = devices.find(d => d.id === parseInt(used.device_id))?.name || "todos";
         const granularityLabel = GRANULARITY_LABELS[used.granularity] || "datos";
-        setActionMessage(`✓ Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`);
+        notify.success(`Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`, { title: "Reportes" });
         // sincronizar los filtros principales con los usados en la consulta
         setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
       }
     } catch (err) {
-      setActionMessage(`❌ Error: ${err.message ?? "No se pudo consultar el reporte."}`);
+      notify.error(err.message ?? "No se pudo consultar el reporte.", { title: "Reportes" });
       setReportResult(null);
     } finally {
       setActionLoading(null);
@@ -158,14 +164,11 @@ export default function ReportesPanel() {
   // Exportación con filtros opcionales
   async function ejecutarExportacion(formato, overrideFiltros = null) {
     if (!isAdminUser && !hasAssignedDevices) {
-      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder exportar reportes.");
+      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder exportar reportes.", { title: "Reportes" });
       return;
     }
 
     setActionLoading(`export-${formato}`);
-    setActionMessage(null);
-    setExportDownloadUrl("");
-    setActivityId(null);
 
     try {
       const used = overrideFiltros ?? filtros;
@@ -183,16 +186,19 @@ export default function ReportesPanel() {
       const formatLabel = formato === "xlsx" ? "Excel" : "Word";
       const id = response?.activity_id;
       
-      if (id) {
-        setActivityId(id);
-        // Construir URL de descarga segura
-        const downloadUrl = `/api/reportes/export/download/${id}`;
-        setExportDownloadUrl(downloadUrl);
-      }
-      
-      setActionMessage(response?.mensaje ?? `✓ Exportación ${formatLabel} generada.${response?.filename ? ` Archivo: ${response.filename}` : ""}`);
+      notify.success(response?.mensaje ?? `Exportación ${formatLabel} generada.${response?.filename ? ` Archivo: ${response.filename}` : ""}`, {
+        title: "Reportes",
+        actions: id ? [
+          {
+            label: "Descargar",
+            onClick: () => {
+              window.location.href = `/api/reportes/export/download/${id}`;
+            },
+          },
+        ] : [],
+      });
     } catch (err) {
-      setActionMessage(`❌ Error en exportación: ${err.message ?? "No se pudo preparar la exportación."}`);
+      notify.error(err.message ?? "No se pudo preparar la exportación.", { title: "Reportes" });
     } finally {
       setActionLoading(null);
     }
@@ -201,12 +207,11 @@ export default function ReportesPanel() {
   // Resumen IA con filtros opcionales
   async function ejecutarResumenIa(overrideFiltros = null) {
     if (!isAdminUser && !hasAssignedDevices) {
-      setActionMessage("⚠️ No tienes dispositivos asignados todavía. Contacta al administrador para poder generar resúmenes IA.");
+      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder generar resúmenes IA.", { title: "Reportes" });
       return;
     }
 
     setActionLoading("ia");
-    setActionMessage(null);
 
     try {
       const used = overrideFiltros ?? filtros;
@@ -220,9 +225,9 @@ export default function ReportesPanel() {
       if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.resumenIaReportes(payload);
-      setActionMessage(response?.mensaje ? `✓ ${response.mensaje}` : `✓ Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`);
+      notify.success(response?.mensaje ? response.mensaje : `Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`, { title: "Reportes" });
     } catch (err) {
-      setActionMessage(`❌ Error al generar resumen: ${err.message ?? "No se pudo generar el resumen IA."}`);
+      notify.error(err.message ?? "No se pudo generar el resumen IA.", { title: "Reportes" });
     } finally {
       setActionLoading(null);
     }
@@ -440,35 +445,6 @@ export default function ReportesPanel() {
               </div>
             </div>
           </section>
-        </div>
-      )}
-      {actionMessage && (
-        <div style={{
-          marginTop: "0.9rem",
-          padding: "0.8rem 1rem",
-          borderRadius: "8px",
-          backgroundColor: actionMessage.startsWith("❌") ? "rgba(239, 68, 68, 0.1)" :
-                           actionMessage.startsWith("✓") ? "rgba(34, 197, 94, 0.1)" :
-                           actionMessage.startsWith("⚠️") ? "rgba(251, 146, 60, 0.1)" : 
-                           "rgba(59, 130, 246, 0.1)",
-          borderLeft: `4px solid ${actionMessage.startsWith("❌") ? "#ef4444" :
-                                   actionMessage.startsWith("✓") ? "#22c55e" :
-                                   actionMessage.startsWith("⚠️") ? "#fb923c" :
-                                   "#3b82f6"}`,
-          color: actionMessage.startsWith("❌") ? "#991b1b" :
-                 actionMessage.startsWith("✓") ? "#15803d" :
-                 actionMessage.startsWith("⚠️") ? "#92400e" :
-                 "#1e40af",
-          fontSize: "0.9rem"
-        }}>
-          {actionLoading ? "⏳ Procesando..." : actionMessage}
-          {!actionLoading && exportDownloadUrl && (
-            <div style={{ marginTop: "0.45rem" }}>
-              <a href={exportDownloadUrl} target="_blank" rel="noreferrer" className="aq-link-button">
-                Descargar archivo generado
-              </a>
-            </div>
-          )}
         </div>
       )}
     </section>
