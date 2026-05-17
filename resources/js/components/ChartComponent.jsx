@@ -50,7 +50,7 @@ export default function ChartComponent({ data: externalData = null, title = null
     start: "",
     end: "",
     device_id: "",
-    city_id: "",
+      city_id: "", // This line remains unchanged
   });
   const [showInlineFilters, setShowInlineFilters] = useState(false);
 
@@ -174,17 +174,10 @@ export default function ChartComponent({ data: externalData = null, title = null
       device: row.device_name ?? row.device ?? "—",
     }));
 
-  if (!points.length) {
-    const emptyMessage = !isAdminUser && !(user?.devices?.length ?? 0)
-      ? "No tienes dispositivos asignados todavía. Contacta al administrador para ver gráficas y reportes."
-      : "Aún no hay registros suficientes para construir la gráfica.";
-
-    return (
-      <div className="aq-empty-state">
-        {emptyMessage}
-      </div>
-    );
-  }
+  const hasPoints = points.length > 0;
+  const emptyMessage = !isAdminUser && !(user?.devices?.length ?? 0)
+    ? "No tienes dispositivos asignados todavía. Contacta al administrador para ver gráficas y reportes."
+    : "Aún no hay registros suficientes para construir la gráfica con este filtro. Puedes cambiar ciudad, fechas o granularidad y volver a consultar.";
 
   const rawMax = points.length ? Math.max(...points.map((point) => point.y)) : 0;
   const rawMin = points.length ? Math.min(...points.map((point) => point.y)) : 0;
@@ -257,6 +250,17 @@ export default function ChartComponent({ data: externalData = null, title = null
         <i className="bi bi-bar-chart-fill"></i>
         {title ?? `Tendencia de pH — últimos ${limit} registros`}
       </div>
+        {resultFiltros && (
+          <div className="aq-report-filter-summary">
+            <span className="aq-report-filter-summary-label">Filtros seleccionados</span>
+            <div className="aq-report-filter-summary-chips">
+              <span className="aq-report-filter-chip"><strong>Granularidad:</strong> {localFilters.granularity || "week"}</span>
+              <span className="aq-report-filter-chip"><strong>Ciudad:</strong> {cities.find((city) => String(city.id) === String(localFilters.city_id))?.name ?? "Todas"}</span>
+              <span className="aq-report-filter-chip"><strong>Dispositivo:</strong> {devices.find((device) => String(device.id) === String(localFilters.device_id))?.name ?? "Todos"}</span>
+              <span className="aq-report-filter-chip"><strong>Periodo:</strong> {[localFilters.start || "inicio", localFilters.end || "hoy"].join(" → ")}</span>
+            </div>
+          </div>
+        )}
 
       {/* Inline result filters and quick actions (applies when parent provides handlers) */}
       {(onRunQuery || onExport || onIa || resultFiltros) && (
@@ -284,6 +288,16 @@ export default function ChartComponent({ data: externalData = null, title = null
               <option value="">Todos dispositivos</option>
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <select
+              className="aq-input"
+              value={localFilters.city_id || ""}
+              onChange={(e) => setLocalFilters((p) => ({ ...p, city_id: e.target.value }))}
+            >
+              <option value="">Todas las ciudades</option>
+              {cities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}</option>
               ))}
             </select>
             <select
@@ -389,9 +403,9 @@ export default function ChartComponent({ data: externalData = null, title = null
         </button>
       </div>
       )}
-      {!data.length ? (
-        <div className="aq-empty-state">
-          No hay lecturas para el filtro actual. Puedes cambiar ciudad o búsqueda sin perder los controles.
+      {!hasPoints ? (
+        <div className="aq-empty-state" style={{ marginTop: "0.4rem" }}>
+          {emptyMessage}
         </div>
       ) : (
         <div className="aq-linechart-shell">
