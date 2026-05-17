@@ -40,7 +40,9 @@ export default function ReportesPanel() {
   });
   const [reportResult, setReportResult] = useState(null);
   const [resultFiltros, setResultFiltros] = useState(filtros);
+  const [consultaEjecutada, setConsultaEjecutada] = useState(false);
   const greetedNoDevicesRef = useRef(false);
+  const lastConsultaFiltrosRef = useRef(null);
 
   function normalizeDeviceList(deviceList) {
     return Array.isArray(deviceList) ? deviceList : [];
@@ -91,6 +93,22 @@ export default function ReportesPanel() {
     }
   }, [hasAssignedDevices, isAdminUser, notify]);
 
+  useEffect(() => {
+    function handleAlertsRefresh() {
+      if (!consultaEjecutada || !lastConsultaFiltrosRef.current) {
+        return;
+      }
+
+      ejecutarConsulta(lastConsultaFiltrosRef.current, { silent: true });
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
+  }, [consultaEjecutada]);
+
   if (loading) {
     return (
       <div className="aq-panel">
@@ -111,15 +129,20 @@ export default function ReportesPanel() {
   }
 
   // Ejecuta la consulta. Si se pasa `overrideFiltros`, usa esos en lugar del state `filtros`.
-  async function ejecutarConsulta(overrideFiltros = null) {
+  async function ejecutarConsulta(overrideFiltros = null, options = {}) {
+    const { silent = false } = options;
+
     if (!isAdminUser && !hasAssignedDevices) {
-      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
+      if (!silent) {
+        notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
+      }
       setReportResult(null);
       return;
     }
 
     setActionLoading("consulta");
     setReportResult(null);
+    setConsultaEjecutada(false);
 
     try {
       const used = {
@@ -140,22 +163,32 @@ export default function ReportesPanel() {
       const response = await api.consultarReportes(payload);
 
       const hasData = response?.series && response.series.length > 0;
+      const resultPayload = response ?? { series: [], rows: [], meta: {} };
+
+      setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
+      setResultFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
+      lastConsultaFiltrosRef.current = { ...used };
+      setReportResult(resultPayload);
+      setConsultaEjecutada(true);
 
       if (!hasData) {
-        notify.warning(response?.meta?.mensaje ?? "No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.", { title: "Reportes" });
-        setReportResult(null);
+        if (!silent) {
+          notify.warning(response?.meta?.mensaje ?? "No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.", { title: "Reportes" });
+        }
       } else {
-        setReportResult(response ?? null);
         const selectedCity = cities.find(c => c.id === parseInt(used.city_id))?.name || "todas";
         const selectedDevice = devices.find(d => d.id === parseInt(used.device_id))?.name || "todos";
         const granularityLabel = GRANULARITY_LABELS[used.granularity] || "datos";
-        notify.success(`Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`, { title: "Reportes" });
-        // sincronizar los filtros principales con los usados en la consulta
-        setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
+        if (!silent) {
+          notify.success(`Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`, { title: "Reportes" });
+        }
       }
     } catch (err) {
-      notify.error(err.message ?? "No se pudo consultar el reporte.", { title: "Reportes" });
+      if (!silent) {
+        notify.error(err.message ?? "No se pudo consultar el reporte.", { title: "Reportes" });
+      }
       setReportResult(null);
+      setConsultaEjecutada(false);
     } finally {
       setActionLoading(null);
     }
@@ -232,6 +265,9 @@ export default function ReportesPanel() {
       setActionLoading(null);
     }
   }
+
+  const seriesRows = Array.isArray(reportResult?.series) ? reportResult.series : [];
+  const tableRows = Array.isArray(reportResult?.rows) ? reportResult.rows : [];
 
   return (
     <section className="aq-panel">
@@ -393,7 +429,7 @@ export default function ReportesPanel() {
 
       </div>
 
-      {reportResult && reportResult.series && reportResult.series.length > 0 && (
+      {consultaEjecutada && (
         <div style={{ marginTop: "1rem" }}>
           <section className="aq-panel">
             <div className="aq-panel-title">
@@ -401,10 +437,16 @@ export default function ReportesPanel() {
               Resultados de la consulta
             </div>
             <div style={{ marginTop: "0.6rem" }}>
+              {(!reportResult?.series || reportResult.series.length === 0) && (
+                <div className="aq-empty-state" style={{ marginBottom: "1rem" }}>
+                  {reportResult?.meta?.mensaje ?? "No hay datos para el filtro seleccionado. Puedes ajustar los selectores y volver a consultar sin recargar la página."}
+                </div>
+              )}
+
               {/* ChartComponent and TableComponent accept external `data` prop if provided */}
               <div style={{ marginBottom: "1rem" }}>
                 <ChartComponent
-                  data={reportResult.series.map((s, idx) => ({ 
+                  data={seriesRows.map((s, idx) => ({ 
                     fecha: s.label, 
                     ph: s.value,
                     index: idx
@@ -421,7 +463,7 @@ export default function ReportesPanel() {
 
               <div>
                 <TableComponent
-                    data={reportResult.rows?.map((r, idx) => ({
+                    data={tableRows.map((r, idx) => ({
                       id: idx,
                       label: r.label,
                       avg: r.avg,

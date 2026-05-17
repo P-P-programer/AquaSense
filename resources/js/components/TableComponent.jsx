@@ -212,6 +212,13 @@ export default function TableComponent({ data: externalData = null, title = null
 
 
   const selectedCity = cities.find((city) => String(city.id) === String(cityFilter)) ?? null;
+  const selectedDevice = devices.find((device) => String(device.id) === String(localFilters.device_id)) ?? null;
+  const filterSummary = [
+    { label: "Granularidad", value: localFilters.granularity || "week" },
+    { label: "Ciudad", value: selectedCity ? selectedCity.name : "Todas" },
+    { label: "Dispositivo", value: selectedDevice ? selectedDevice.name : "Todos" },
+    { label: "Periodo", value: [localFilters.start || "inicio", localFilters.end || "hoy"].join(" → ") },
+  ];
   const citySuggestions = cityQuery.trim()
     ? cities.filter((city) => {
         const haystack = `${city.name} ${city.department}`.toLowerCase();
@@ -246,6 +253,32 @@ export default function TableComponent({ data: externalData = null, title = null
   }, [cityFilter, externalData, limit]);
 
   useEffect(() => {
+    if (Array.isArray(externalData)) {
+      return undefined;
+    }
+
+    function handleAlertsRefresh() {
+      setLoading(true);
+      api.getRegistros({
+        city_id: cityFilter || undefined,
+        limit: 20,
+      })
+        .then((registros) => {
+          setData(Array.isArray(registros) ? registros.slice(0, limit) : []);
+          setExpandedRowIndex(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
+  }, [cityFilter, externalData, limit]);
+
+  useEffect(() => {
     if (resultFiltros) setLocalFilters(resultFiltros);
   }, [resultFiltros]);
 
@@ -258,6 +291,21 @@ export default function TableComponent({ data: externalData = null, title = null
   useEffect(() => {
     setCityQuery(selectedCity ? `${selectedCity.name} (${selectedCity.department})` : "");
   }, [selectedCity]);
+
+  useEffect(() => {
+    if (!localFilters.city_id) {
+      setCityFilter("");
+      setCityQuery("");
+      setShowSuggestions(false);
+      return;
+    }
+
+    const city = cities.find((item) => String(item.id) === String(localFilters.city_id));
+    if (city) {
+      setCityFilter(String(city.id));
+      setCityQuery(`${city.name} (${city.department})`);
+    }
+  }, [cities, localFilters.city_id]);
 
   function selectCity(city) {
     setCityFilter(String(city.id));
@@ -323,6 +371,27 @@ export default function TableComponent({ data: externalData = null, title = null
               <option value="">Todos dispositivos</option>
               {devices.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <select
+              className="aq-input"
+              value={localFilters.city_id || ""}
+              onChange={(e) => {
+                const nextCityId = e.target.value;
+                setLocalFilters((p) => ({ ...p, city_id: nextCityId }));
+                if (nextCityId) {
+                  const nextCity = cities.find((city) => String(city.id) === String(nextCityId));
+                  setCityFilter(String(nextCityId));
+                  setCityQuery(nextCity ? `${nextCity.name} (${nextCity.department})` : "");
+                  setShowSuggestions(false);
+                } else {
+                  clearCityFilter();
+                }
+              }}
+            >
+              <option value="">Todas las ciudades</option>
+              {cities.map((city) => (
+                <option key={city.id} value={city.id}>{city.name}</option>
               ))}
             </select>
             <select

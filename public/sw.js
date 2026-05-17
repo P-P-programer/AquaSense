@@ -25,7 +25,22 @@ self.addEventListener('push', event => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(pushData.title, options)
+    Promise.all([
+      self.registration.showNotification(pushData.title, options),
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        clientList.forEach(client => {
+          client.postMessage({
+            type: 'AQUASENSE_PUSH_RECEIVED',
+            payload: {
+              title: pushData.title,
+              body: options.body,
+              tag: options.tag,
+              data: options.data || {},
+            },
+          });
+        });
+      }),
+    ])
   );
 });
 

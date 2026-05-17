@@ -295,8 +295,9 @@ body {
 .aq-pwa-banner {
   position: relative;
   z-index: 1;
-  margin: 1rem 1.3rem 0;
-  padding: 0.95rem 1rem;
+  width: min(100% - 2.6rem, 980px);
+  margin: 1rem auto 0;
+  padding: 1rem 1.1rem;
   border: 1px solid rgba(26, 86, 219, 0.18);
   border-left: 4px solid var(--azul-agua);
   border-radius: 18px;
@@ -305,8 +306,8 @@ body {
   box-shadow: 0 18px 40px rgba(13, 43, 85, 0.12);
   display: grid;
   grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.9rem;
+  align-items: start;
+  gap: 1rem;
   animation: aq-banner-drop 0.28s ease;
 }
 
@@ -366,9 +367,50 @@ body {
 
 .aq-pwa-banner-hint {
   grid-column: 2 / 4;
-  margin-top: 0.1rem;
+  margin-top: 0.15rem;
   font-size: 0.8rem;
   color: #1d4ed8;
+}
+
+.aq-report-filter-summary {
+  margin: 0.35rem 0 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #d8e7fb;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(240, 247, 255, 0.94));
+}
+
+.aq-report-filter-summary-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-secundario);
+  margin-bottom: 0.55rem;
+}
+
+.aq-report-filter-summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.aq-report-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.6rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #d6e4f7;
+  color: var(--texto-secundario);
+  font-size: 0.82rem;
+}
+
+.aq-report-filter-chip strong {
+  color: var(--azul-profundo);
+  font-weight: 700;
 }
 
 .aq-notify-head,
@@ -439,9 +481,10 @@ body {
 
 @media (max-width: 860px) {
   .aq-pwa-banner {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
+    width: calc(100% - 1.4rem);
+    margin: 0.85rem auto 0;
     justify-items: start;
-    margin: 0.85rem 1rem 0;
   }
 
   .aq-pwa-banner-icon {
@@ -450,6 +493,7 @@ body {
   }
 
   .aq-pwa-banner-actions {
+    grid-column: 1 / -1;
     width: 100%;
     justify-content: flex-start;
   }
@@ -460,7 +504,7 @@ body {
   }
 
   .aq-pwa-banner-hint {
-    grid-column: auto;
+    grid-column: 1 / -1;
   }
 }
 
