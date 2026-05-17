@@ -42,6 +42,7 @@ export default function ReportesPanel() {
   const [resultFiltros, setResultFiltros] = useState(filtros);
   const [consultaEjecutada, setConsultaEjecutada] = useState(false);
   const greetedNoDevicesRef = useRef(false);
+  const lastConsultaFiltrosRef = useRef(null);
 
   function normalizeDeviceList(deviceList) {
     return Array.isArray(deviceList) ? deviceList : [];
@@ -92,6 +93,22 @@ export default function ReportesPanel() {
     }
   }, [hasAssignedDevices, isAdminUser, notify]);
 
+  useEffect(() => {
+    function handleAlertsRefresh() {
+      if (!consultaEjecutada || !lastConsultaFiltrosRef.current) {
+        return;
+      }
+
+      ejecutarConsulta(lastConsultaFiltrosRef.current, { silent: true });
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
+  }, [consultaEjecutada]);
+
   if (loading) {
     return (
       <div className="aq-panel">
@@ -112,9 +129,13 @@ export default function ReportesPanel() {
   }
 
   // Ejecuta la consulta. Si se pasa `overrideFiltros`, usa esos en lugar del state `filtros`.
-  async function ejecutarConsulta(overrideFiltros = null) {
+  async function ejecutarConsulta(overrideFiltros = null, options = {}) {
+    const { silent = false } = options;
+
     if (!isAdminUser && !hasAssignedDevices) {
-      notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
+      if (!silent) {
+        notify.warning("No tienes dispositivos asignados todavía. Contacta al administrador para poder consultar y generar reportes.", { title: "Reportes" });
+      }
       setReportResult(null);
       return;
     }
@@ -146,19 +167,26 @@ export default function ReportesPanel() {
 
       setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
       setResultFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
+      lastConsultaFiltrosRef.current = { ...used };
       setReportResult(resultPayload);
       setConsultaEjecutada(true);
 
       if (!hasData) {
-        notify.warning(response?.meta?.mensaje ?? "No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.", { title: "Reportes" });
+        if (!silent) {
+          notify.warning(response?.meta?.mensaje ?? "No hay datos disponibles para los filtros seleccionados. Intenta cambiar el rango de fechas, dispositivo o ciudad.", { title: "Reportes" });
+        }
       } else {
         const selectedCity = cities.find(c => c.id === parseInt(used.city_id))?.name || "todas";
         const selectedDevice = devices.find(d => d.id === parseInt(used.device_id))?.name || "todos";
         const granularityLabel = GRANULARITY_LABELS[used.granularity] || "datos";
-        notify.success(`Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`, { title: "Reportes" });
+        if (!silent) {
+          notify.success(`Consulta completada: ${response.series.length} puntos de ${granularityLabel} (dispositivo: ${selectedDevice}, ciudad: ${selectedCity})`, { title: "Reportes" });
+        }
       }
     } catch (err) {
-      notify.error(err.message ?? "No se pudo consultar el reporte.", { title: "Reportes" });
+      if (!silent) {
+        notify.error(err.message ?? "No se pudo consultar el reporte.", { title: "Reportes" });
+      }
       setReportResult(null);
       setConsultaEjecutada(false);
     } finally {

@@ -5,10 +5,26 @@ export default function StatsComponent() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  function loadStats() {
     api.getStats()
       .then(setStats)
       .catch(err => setError(err.message));
+  }
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    function handleAlertsRefresh() {
+      loadStats();
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
   }, []);
 
   if (error) return (

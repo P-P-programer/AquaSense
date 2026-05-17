@@ -93,6 +93,31 @@ export default function ChartComponent({ data: externalData = null, title = null
       .finally(() => setLoading(false));
   }, [cityFilter, externalData, limit]);
 
+  useEffect(() => {
+    if (Array.isArray(externalData)) {
+      return undefined;
+    }
+
+    function handleAlertsRefresh() {
+      setLoading(true);
+      api.getRegistros({
+        city_id: cityFilter || undefined,
+        limit: 20,
+      })
+        .then((registros) => {
+          setData(Array.isArray(registros) ? registros.slice(0, limit) : []);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
+  }, [cityFilter, externalData, limit]);
+
   // Mantener sincronizada la copia local de filtros si cambian desde el padre
   useEffect(() => {
     if (resultFiltros) setLocalFilters(resultFiltros);

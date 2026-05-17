@@ -156,6 +156,18 @@ export default function AlertsPanel() {
   }, [statusFilter, cityFilter]);
 
   useEffect(() => {
+    function handleAlertsRefresh() {
+      loadAlerts({ silent: true });
+    }
+
+    window.addEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+
+    return () => {
+      window.removeEventListener('aquasense:alerts-refresh', handleAlertsRefresh);
+    };
+  }, [statusFilter, cityFilter]);
+
+  useEffect(() => {
     api.getCities()
       .then((data) => setCities(Array.isArray(data) ? data : []))
       .catch(() => setCities([]));

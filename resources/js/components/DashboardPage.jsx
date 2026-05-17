@@ -153,6 +153,29 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (!('serviceWorker' in navigator)) {
+      return undefined;
+    }
+
+    const handleServiceWorkerMessage = (event) => {
+      if (event?.data?.type !== 'AQUASENSE_PUSH_RECEIVED') {
+        return;
+      }
+
+      loadHeaderAlerts();
+      window.dispatchEvent(new CustomEvent('aquasense:alerts-refresh', {
+        detail: event.data.payload ?? null,
+      }));
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isAdmin() && activeSection === "admin") {
       setActiveSection("overview");
     }
