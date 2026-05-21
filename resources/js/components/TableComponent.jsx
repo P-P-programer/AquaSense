@@ -231,7 +231,6 @@ export default function TableComponent({ data: externalData = null, title = null
       setLoading(false);
       setError(null);
       setData(externalData.slice(0, limit));
-      setExpandedRowIndex(null);
       // Reset city filter when external data is present (data is already filtered)
       setCityFilter("");
       setCityQuery("");
