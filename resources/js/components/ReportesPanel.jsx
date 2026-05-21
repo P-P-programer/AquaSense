@@ -30,7 +30,15 @@ export default function ReportesPanel() {
   const [actionLoading, setActionLoading] = useState(null);
   const [devices, setDevices] = useState([]);
   const [cities, setCities] = useState([]);
-  const [filtros, setFiltros] = useState({
+  const [reportFilters, setReportFilters] = useState({
+    metric: "ph",
+    granularity: "week",
+    start: "",
+    end: "",
+    device_id: "",
+    city_id: "",
+  });
+  const [aiFilters, setAiFilters] = useState({
     metric: "ph",
     granularity: "week",
     start: "",
@@ -39,8 +47,11 @@ export default function ReportesPanel() {
     city_id: "",
   });
   const [reportResult, setReportResult] = useState(null);
-  const [resultFiltros, setResultFiltros] = useState(filtros);
+  const [resultFiltros, setResultFiltros] = useState(reportFilters);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiResultFiltros, setAiResultFiltros] = useState(aiFilters);
   const [consultaEjecutada, setConsultaEjecutada] = useState(false);
+  const [aiEjecutada, setAiEjecutada] = useState(false);
   const greetedNoDevicesRef = useRef(false);
   const lastConsultaFiltrosRef = useRef(null);
 
@@ -146,7 +157,7 @@ export default function ReportesPanel() {
 
     try {
       const used = {
-        ...filtros,
+        ...reportFilters,
         ...(overrideFiltros ?? {}),
       };
 
@@ -165,7 +176,7 @@ export default function ReportesPanel() {
       const hasData = response?.series && response.series.length > 0;
       const resultPayload = response ?? { series: [], rows: [], meta: {} };
 
-      setFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
+      setReportFilters((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
       setResultFiltros((prev) => ({ ...prev, ...(overrideFiltros ?? {}) }));
       lastConsultaFiltrosRef.current = { ...used };
       setReportResult(resultPayload);
@@ -204,7 +215,7 @@ export default function ReportesPanel() {
     setActionLoading(`export-${formato}`);
 
     try {
-      const used = overrideFiltros ?? filtros;
+      const used = overrideFiltros ?? reportFilters;
       const payload = {
         metric: used.metric || "ph",
         format: formato,
@@ -247,7 +258,7 @@ export default function ReportesPanel() {
     setActionLoading("ia");
 
     try {
-      const used = overrideFiltros ?? filtros;
+      const used = overrideFiltros ?? aiFilters;
       const payload = {
         metric: used.metric || "ph",
         granularity: used.granularity || "week",
@@ -258,7 +269,11 @@ export default function ReportesPanel() {
       if (used.city_id) payload.city_id = parseInt(used.city_id);
 
       const response = await api.resumenIaReportes(payload);
-      notify.success(response?.mensaje ? response.mensaje : `Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`, { title: "Reportes" });
+      const summaryText = response?.resumen ?? response?.mensaje ?? `Resumen IA generado. ${response?.resumen?.substring(0, 100) ?? ""}`;
+      setAiResult(response ?? { resumen: summaryText, mensaje: summaryText, filtros: used });
+      setAiResultFiltros({ ...used });
+      setAiEjecutada(true);
+      notify.success(summaryText, { title: "Reportes" });
     } catch (err) {
       notify.error(err.message ?? "No se pudo generar el resumen IA.", { title: "Reportes" });
     } finally {
@@ -276,7 +291,7 @@ export default function ReportesPanel() {
         Reportes
       </div>
       <p className="aq-table-meta" style={{ marginTop: 0 }}>
-        Módulo para resúmenes semanales, filtros por periodo, exportaciones e IA.
+        Módulo para consulta de reportes, resumen IA y exportación en Word/Excel.
       </p>
 
       {!isAdminUser && !hasAssignedDevices && (
@@ -307,8 +322,8 @@ export default function ReportesPanel() {
 
         <div className="aq-stat-card">
           <span className="aq-stat-label"><i className="bi bi-calendar-week"></i> Enfoque</span>
-          <span className="aq-stat-value">Sprint 1</span>
-          <span className="aq-stat-unit">agregaciones, filtros y vistas</span>
+          <span className="aq-stat-value">Consulta + IA</span>
+          <span className="aq-stat-unit">gráficas, tabla y Word</span>
         </div>
       </div>
 
@@ -329,8 +344,8 @@ export default function ReportesPanel() {
               </label>
               <select
                 className="aq-input"
-                value={filtros.metric}
-                onChange={(e) => setFiltros({ ...filtros, metric: e.target.value })}
+                value={reportFilters.metric}
+                onChange={(e) => setReportFilters({ ...reportFilters, metric: e.target.value })}
               >
                 <option value="ph">pH</option>
               </select>
@@ -342,8 +357,8 @@ export default function ReportesPanel() {
               </label>
               <select
                 className="aq-input"
-                value={filtros.granularity}
-                onChange={(e) => setFiltros({ ...filtros, granularity: e.target.value })}
+                value={reportFilters.granularity}
+                onChange={(e) => setReportFilters({ ...reportFilters, granularity: e.target.value })}
               >
                 <option value="day">Diario</option>
                 <option value="week">Semanal</option>
@@ -359,8 +374,8 @@ export default function ReportesPanel() {
               <input
                 type="date"
                 className="aq-input"
-                value={filtros.start}
-                onChange={(e) => setFiltros({ ...filtros, start: e.target.value })}
+                value={reportFilters.start}
+                onChange={(e) => setReportFilters({ ...reportFilters, start: e.target.value })}
               />
             </div>
 
@@ -371,8 +386,8 @@ export default function ReportesPanel() {
               <input
                 type="date"
                 className="aq-input"
-                value={filtros.end}
-                onChange={(e) => setFiltros({ ...filtros, end: e.target.value })}
+                value={reportFilters.end}
+                onChange={(e) => setReportFilters({ ...reportFilters, end: e.target.value })}
               />
             </div>
 
@@ -382,8 +397,8 @@ export default function ReportesPanel() {
               </label>
               <select
                 className="aq-input"
-                value={filtros.device_id}
-                onChange={(e) => setFiltros({ ...filtros, device_id: e.target.value })}
+                value={reportFilters.device_id}
+                onChange={(e) => setReportFilters({ ...reportFilters, device_id: e.target.value })}
                 disabled={!hasAssignedDevices}
               >
                 <option value="">{isAdminUser ? "Todos" : hasAssignedDevices ? "Todos mis dispositivos" : "Sin dispositivos"}</option>
@@ -401,8 +416,8 @@ export default function ReportesPanel() {
               </label>
               <select
                 className="aq-input"
-                value={filtros.city_id}
-                onChange={(e) => setFiltros({ ...filtros, city_id: e.target.value })}
+                value={reportFilters.city_id}
+                onChange={(e) => setReportFilters({ ...reportFilters, city_id: e.target.value })}
                 disabled={!hasAssignedDevices}
               >
                 <option value="">{isAdminUser ? "Todas" : hasAssignedDevices ? "Mis ciudades" : "Sin ciudades"}</option>
@@ -424,6 +439,146 @@ export default function ReportesPanel() {
           >
             {actionLoading === "consulta" ? "Consultando..." : "Ejecutar consulta"}
           </button>
+        </section>
+
+        <section className="aq-panel" style={{ minHeight: "100%" }}>
+          <div className="aq-panel-title">
+            <i className="bi bi-stars"></i>
+            Resumen con IA
+          </div>
+          <p className="aq-table-meta" style={{ marginTop: 0 }}>
+            Elige los mismos filtros o ajusta otros distintos para resumir con Gemini la operación que quieras revisar.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem", marginTop: "0.85rem" }}>
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Métrica
+              </label>
+              <select
+                className="aq-input"
+                value={aiFilters.metric}
+                onChange={(e) => setAiFilters({ ...aiFilters, metric: e.target.value })}
+              >
+                <option value="ph">pH</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Granularidad
+              </label>
+              <select
+                className="aq-input"
+                value={aiFilters.granularity}
+                onChange={(e) => setAiFilters({ ...aiFilters, granularity: e.target.value })}
+              >
+                <option value="day">Diario</option>
+                <option value="week">Semanal</option>
+                <option value="month">Mensual</option>
+                <option value="year">Anual</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Desde (fecha)
+              </label>
+              <input
+                type="date"
+                className="aq-input"
+                value={aiFilters.start}
+                onChange={(e) => setAiFilters({ ...aiFilters, start: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Hasta (fecha)
+              </label>
+              <input
+                type="date"
+                className="aq-input"
+                value={aiFilters.end}
+                onChange={(e) => setAiFilters({ ...aiFilters, end: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Dispositivo
+              </label>
+              <select
+                className="aq-input"
+                value={aiFilters.device_id}
+                onChange={(e) => setAiFilters({ ...aiFilters, device_id: e.target.value })}
+                disabled={!hasAssignedDevices}
+              >
+                <option value="">{isAdminUser ? "Todos" : hasAssignedDevices ? "Todos mis dispositivos" : "Sin dispositivos"}</option>
+                {devices.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.identifier})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", marginBottom: "0.3rem", fontSize: "0.85rem", fontWeight: 500 }}>
+                Ciudad
+              </label>
+              <select
+                className="aq-input"
+                value={aiFilters.city_id}
+                onChange={(e) => setAiFilters({ ...aiFilters, city_id: e.target.value })}
+                disabled={!hasAssignedDevices}
+              >
+                <option value="">{isAdminUser ? "Todas" : hasAssignedDevices ? "Mis ciudades" : "Sin ciudades"}</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="aq-btn-primary"
+            style={{ marginTop: "0.85rem" }}
+            onClick={() => ejecutarResumenIa(aiFilters)}
+            disabled={actionLoading !== null || (!isAdminUser && !hasAssignedDevices)}
+          >
+            {actionLoading === "ia" ? "Generando resumen..." : "Generar resumen IA"}
+          </button>
+
+          <button
+            type="button"
+            className="aq-btn-secondary"
+            style={{ marginTop: "0.65rem" }}
+            onClick={() => ejecutarExportacion("docx", aiFilters)}
+            disabled={actionLoading !== null || (!isAdminUser && !hasAssignedDevices)}
+          >
+            {actionLoading === "export-docx" ? "Preparando Word..." : "Exportar IA a Word"}
+          </button>
+
+          {aiEjecutada && aiResult && (
+            <div className="aq-report-summary-card" style={{ marginTop: "1rem" }}>
+              <div className="aq-report-summary-head">
+                <div>
+                  <strong>Resumen IA</strong>
+                  <div className="aq-table-meta">
+                    Filtros: {aiResultFiltros.granularity || "week"} · Ciudad {cities.find((city) => String(city.id) === String(aiResultFiltros.city_id))?.name ?? "Todas"} · Dispositivo {devices.find((device) => String(device.id) === String(aiResultFiltros.device_id))?.name ?? "Todos"}
+                  </div>
+                </div>
+                <span className="aq-badge aq-severity-media">IA</span>
+              </div>
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, marginTop: "0.75rem" }}>
+                {aiResult.resumen ?? aiResult.mensaje ?? "Sin resumen disponible."}
+              </div>
+            </div>
+          )}
         </section>
 
 
@@ -451,7 +606,7 @@ export default function ReportesPanel() {
                     ph: s.value,
                     index: idx
                   }))}
-                  title={`Gráfica — ${filtros.metric.toUpperCase()} ${GRANULARITY_SINGULAR[filtros.granularity] || ""}`}
+                  title={`Gráfica — ${reportFilters.metric.toUpperCase()} ${GRANULARITY_SINGULAR[reportFilters.granularity] || ""}`}
                   resultFiltros={resultFiltros}
                   setResultFiltros={setResultFiltros}
                   onRunQuery={ejecutarConsulta}
@@ -476,7 +631,7 @@ export default function ReportesPanel() {
                       anomaly_reason: r.anomaly_reason ?? null,
                       dataType: reportResult.meta?.dataType || "aggregated" // Usar indicador de tipo de la API
                     })) ?? []}
-                  title={`Tabla — ${filtros.metric.toUpperCase()} por período`}
+                  title={`Tabla — ${reportFilters.metric.toUpperCase()} por período`}
                   resultFiltros={resultFiltros}
                   setResultFiltros={setResultFiltros}
                   onRunQuery={ejecutarConsulta}
