@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ReportActivity;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -39,7 +40,8 @@ Formato sugerido:
 PROMPT;
 
     public function __construct(
-        private readonly PeakDetectionService $peakDetectionService = new PeakDetectionService(),
+        private readonly PeakDetectionService $peakDetectionService,
+        private readonly GeminiReportSummaryService $geminiReportSummaryService,
     ) {
     }
 
@@ -254,8 +256,9 @@ PROMPT;
             $fileName = $this->buildExportFileName($filtros, 'docx');
             $relativePath = self::EXPORT_DIRECTORY.'/'.$fileName;
             $absolutePath = Storage::disk('public')->path($relativePath);
+            $iaSummary = $this->generarResumenIaTexto($filtros, $reportData);
 
-            $this->writeWordExport($absolutePath, $filtros, $reportData, $rows);
+            $this->writeWordExport($absolutePath, $filtros, $reportData, $rows, $iaSummary);
             $activity = $this->recordReportActivity(
                 user: $user,
                 actionType: 'export',
@@ -309,11 +312,7 @@ PROMPT;
     {
         $user ??= auth()->user();
         $reportData = $this->consultar($filtros, $user);
-        $summary = $reportData['meta']['mensaje'] ?? 'Resumen con IA en construcción.';
-
-        if ($summary === 'Consulta de reportes ejecutada') {
-            $summary = 'Resumen con IA en construcción.';
-        }
+        $summary = $this->generarResumenIaTexto($filtros, $reportData);
 
         $this->recordReportActivity(
             user: $user,
@@ -357,6 +356,71 @@ PROMPT;
         ];
 
         return implode("\n", $partes);
+    }
+
+    private function generarResumenIaTexto(array $filtros, array $reportData): string
+    {
+        $rows = array_values(array_slice($reportData['rows'] ?? [], 0, 12));
+        $meta = $reportData['meta'] ?? [];
+
+        $userPromptPayload = [
+            'filtros' => $filtros,
+            'meta' => [
+                'mensaje' => $meta['mensaje'] ?? null,
+                'granularity' => $meta['granularity'] ?? null,
+                'trend' => $meta['trend'] ?? null,
+                'anomaly_count' => $meta['anomaly_count'] ?? null,
+                'anomaly_window' => $meta['anomaly_window'] ?? null,
+                'anomaly_zscore_threshold' => $meta['anomaly_zscore_threshold'] ?? null,
+                'anomaly_min_samples' => $meta['anomaly_min_samples'] ?? null,
+            ],
+            'rows_top' => $rows,
+        ];
+
+        $userPrompt = implode("\n", [
+            'Genera un resumen ejecutivo con recomendaciones accionables usando este contexto JSON.',
+            json_encode($userPromptPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'Sé breve (máximo 180 palabras), claro y enfocado en operación.',
+        ]);
+
+        try {
+            return $this->geminiReportSummaryService->generateSummary(self::IA_SYSTEM_PROMPT, $userPrompt);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo generar resumen IA con Gemini; usando fallback.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->fallbackResumen($reportData);
+        }
+    }
+
+    private function fallbackResumen(array $reportData): string
+    {
+        $meta = $reportData['meta'] ?? [];
+        $rows = $reportData['rows'] ?? [];
+        $trend = (string) ($meta['trend'] ?? 'flat');
+        $anomalyCount = (int) ($meta['anomaly_count'] ?? 0);
+        $granularity = (string) ($meta['granularity'] ?? 'week');
+
+        if (empty($rows)) {
+            return (string) ($meta['mensaje'] ?? 'No hay datos suficientes para generar un resumen IA en este momento.');
+        }
+
+        $avgValues = array_values(array_filter(array_map(static fn (array $row) => $row['avg'] ?? null, $rows), static fn ($value) => is_numeric($value)));
+        $globalAvg = !empty($avgValues) ? round(array_sum($avgValues) / count($avgValues), 2) : null;
+        $trendLabel = match ($trend) {
+            'up' => 'al alza',
+            'down' => 'a la baja',
+            default => 'estable',
+        };
+
+        return implode(' ', [
+            "Resumen automático ({$granularity}):",
+            $globalAvg !== null ? "El pH promedio observado es {$globalAvg}." : 'No hay promedio concluyente.',
+            "La tendencia general es {$trendLabel}.",
+            "Se detectaron {$anomalyCount} picos/anomalías.",
+            'Recomendación: revisar periodos con anomalías y validar umbrales de operación para prevenir desviaciones repetidas.',
+        ]);
     }
 
     private function allowedDeviceIds(?User $user): ?array
@@ -437,7 +501,7 @@ PROMPT;
         $writer->save($absolutePath);
     }
 
-    private function writeWordExport(string $absolutePath, array $filtros, array $reportData, array $rows): void
+    private function writeWordExport(string $absolutePath, array $filtros, array $reportData, array $rows, string $iaSummary): void
     {
         Storage::disk('public')->makeDirectory(self::EXPORT_DIRECTORY);
 
@@ -449,6 +513,9 @@ PROMPT;
         $section->addText(json_encode($filtros, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $section->addTextBreak(1);
         $section->addText($reportData['meta']['mensaje'] ?? 'Consulta de reportes ejecutada');
+        $section->addTextBreak(1);
+        $section->addText('Resumen IA:');
+        $section->addText($iaSummary);
 
         $phpWord->addTableStyle('ReporteTable', [
             'borderSize' => 6,

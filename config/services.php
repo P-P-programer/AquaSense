@@ -42,4 +42,13 @@ return [
         'geoapify_api_key' => env('GEOAPIFY_API_KEY'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com'),
+        'timeout_seconds' => env('GEMINI_TIMEOUT_SECONDS', 20),
+        'temperature' => env('GEMINI_TEMPERATURE', 0.2),
+        'max_output_tokens' => env('GEMINI_MAX_OUTPUT_TOKENS', 900),
+    ],
+
 ];
