@@ -36,9 +36,13 @@ class ReportesController extends Controller
             'end' => 'nullable|date',
             'device_id' => 'nullable|integer',
             'city_id' => 'nullable|integer',
+            'charts' => 'nullable|array',
+            'charts.*' => 'file|image|max:5120',
         ]);
 
-        return response()->json($this->reportesService->exportar($data, $request->user()));
+        $uploadedCharts = $request->file('charts', []);
+
+        return response()->json($this->reportesService->exportar($data, $request->user(), $uploadedCharts));
     }
 
     public function iaResumen(Request $request)

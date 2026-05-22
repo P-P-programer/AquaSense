@@ -310,6 +310,34 @@ const api = {
   },
   consultarReportes: (payload) => api.post("/reportes/query", payload),
   exportarReportes: (payload) => api.post("/reportes/export", payload),
+  exportarReportesForm: async (formData) => {
+    // formData should be a FormData instance; use fetch to allow multipart upload
+    if (!(formData instanceof FormData)) {
+      throw new Error('exportarReportesForm requires FormData');
+    }
+
+    await ensureCsrf();
+
+    const options = {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-XSRF-TOKEN': getXsrfToken(),
+        Accept: 'application/json',
+      },
+      body: formData,
+    };
+
+    const res = await fetch(`${BASE_URL}/api/reportes/export`, options);
+    if (res.status === 204) return null;
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message = data?.message ?? `Error ${res.status}`;
+      throw Object.assign(new Error(message), { status: res.status, data });
+    }
+
+    return data;
+  },
   resumenIaReportes: (payload) => api.post("/reportes/ia/resumen", payload),
   obtenerHistorialReportes: (params = {}) => {
     const query = new URLSearchParams();
