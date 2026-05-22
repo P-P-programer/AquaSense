@@ -233,7 +233,7 @@ PROMPT;
         ];
     }
 
-    public function exportar(array $filtros, ?User $user = null): array
+    public function exportar(array $filtros, ?User $user = null, array $uploadedCharts = []): array
     {
         $user ??= auth()->user();
         $format = $filtros['format'] ?? 'xlsx';
@@ -258,7 +258,7 @@ PROMPT;
             $absolutePath = Storage::disk('public')->path($relativePath);
             $iaSummary = $this->generarResumenIaTexto($filtros, $reportData);
 
-            $this->writeWordExport($absolutePath, $filtros, $reportData, $rows, $iaSummary);
+            $this->writeWordExport($absolutePath, $filtros, $reportData, $rows, $iaSummary, $uploadedCharts);
             $activity = $this->recordReportActivity(
                 user: $user,
                 actionType: 'export',
@@ -501,12 +501,21 @@ PROMPT;
         $writer->save($absolutePath);
     }
 
-    private function writeWordExport(string $absolutePath, array $filtros, array $reportData, array $rows, string $iaSummary): void
+    private function writeWordExport(string $absolutePath, array $filtros, array $reportData, array $rows, string $iaSummary, array $imageFiles = []): void
     {
         Storage::disk('public')->makeDirectory(self::EXPORT_DIRECTORY);
 
         $phpWord = new PhpWord();
         $section = $phpWord->addSection();
+
+        $avgValues = array_values(array_filter(array_map(static fn (array $row) => $row['avg'] ?? null, $rows), static fn ($value) => is_numeric($value)));
+        $minValues = array_values(array_filter(array_map(static fn (array $row) => $row['min'] ?? null, $rows), static fn ($value) => is_numeric($value)));
+        $maxValues = array_values(array_filter(array_map(static fn (array $row) => $row['max'] ?? null, $rows), static fn ($value) => is_numeric($value)));
+        $globalAvg = !empty($avgValues) ? round(array_sum($avgValues) / count($avgValues), 2) : null;
+        $globalMin = !empty($minValues) ? round(min($minValues), 2) : null;
+        $globalMax = !empty($maxValues) ? round(max($maxValues), 2) : null;
+        $trend = (string) ($reportData['meta']['trend'] ?? 'flat');
+        $anomalyCount = (int) ($reportData['meta']['anomaly_count'] ?? 0);
 
         $section->addTitle('Reporte de AquaSense', 1);
         $section->addText('Filtros aplicados:');
@@ -514,8 +523,43 @@ PROMPT;
         $section->addTextBreak(1);
         $section->addText($reportData['meta']['mensaje'] ?? 'Consulta de reportes ejecutada');
         $section->addTextBreak(1);
+        $section->addText('Resumen técnico de la consulta:');
+        $section->addText('Promedio global: '.($globalAvg !== null ? (string) $globalAvg : 'N/D'));
+        $section->addText('Mínimo global: '.($globalMin !== null ? (string) $globalMin : 'N/D'));
+        $section->addText('Máximo global: '.($globalMax !== null ? (string) $globalMax : 'N/D'));
+        $section->addText('Tendencia: '.match ($trend) {
+            'up' => 'al alza',
+            'down' => 'a la baja',
+            default => 'estable',
+        });
+        $section->addText('Anomalías detectadas: '.$anomalyCount);
+        $section->addTextBreak(1);
         $section->addText('Resumen IA:');
         $section->addText($iaSummary);
+
+        // Insert any provided chart images
+        if (! empty($imageFiles)) {
+            foreach ($imageFiles as $img) {
+                try {
+                    $path = null;
+                    if ($img instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $img->getRealPath();
+                    } elseif (is_string($img) && file_exists($img)) {
+                        $path = $img;
+                    }
+
+                    if ($path && file_exists($path)) {
+                        // Add a page break before images for clarity
+                        $section->addPageBreak();
+                        $section->addImage($path, ['width' => 600]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('No se pudo insertar una imagen en el export Word: '.$e->getMessage());
+                    continue;
+                }
+            }
+            $section->addTextBreak(1);
+        }
 
         $phpWord->addTableStyle('ReporteTable', [
             'borderSize' => 6,

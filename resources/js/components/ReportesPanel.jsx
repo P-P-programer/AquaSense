@@ -54,6 +54,9 @@ export default function ReportesPanel() {
   const [aiEjecutada, setAiEjecutada] = useState(false);
   const greetedNoDevicesRef = useRef(false);
   const lastConsultaFiltrosRef = useRef(null);
+  const chartRef = useRef(null);
+  const aiExportChartRef = useRef(null);
+  const [aiExportChartData, setAiExportChartData] = useState([]);
 
   function normalizeDeviceList(deviceList) {
     return Array.isArray(deviceList) ? deviceList : [];
@@ -545,22 +548,76 @@ export default function ReportesPanel() {
 
           <button
             type="button"
-            className="aq-btn-primary"
-            style={{ marginTop: "0.85rem" }}
-            onClick={() => ejecutarResumenIa(aiFilters)}
-            disabled={actionLoading !== null || (!isAdminUser && !hasAssignedDevices)}
-          >
-            {actionLoading === "ia" ? "Generando resumen..." : "Generar resumen IA"}
-          </button>
-
-          <button
-            type="button"
             className="aq-btn-secondary"
             style={{ marginTop: "0.65rem" }}
-            onClick={() => ejecutarExportacion("docx", aiFilters)}
+            onClick={async () => {
+              if (!confirm('¿Confirmas generar y exportar el resumen IA para los filtros seleccionados?')) return;
+
+              if (!isAdminUser && !hasAssignedDevices) {
+                notify.warning('No tienes dispositivos asignados todavía. Contacta al administrador para poder exportar reportes.', { title: 'Reportes' });
+                return;
+              }
+
+              setActionLoading('export-docx');
+              try {
+                    const used = aiFilters;
+                    const payload = {
+                      metric: used.metric || 'ph',
+                      granularity: used.granularity || 'week',
+                    };
+                    if (used.start) payload.start = used.start;
+                    if (used.end) payload.end = used.end;
+                    if (used.device_id) payload.device_id = parseInt(used.device_id);
+                    if (used.city_id) payload.city_id = parseInt(used.city_id);
+
+                    const previewResponse = await api.consultarReportes(payload);
+                    const previewSeries = Array.isArray(previewResponse?.series)
+                      ? previewResponse.series.map((s, idx) => ({
+                          fecha: s.label,
+                          ph: s.value,
+                          index: idx,
+                        }))
+                      : [];
+
+                    setAiExportChartData(previewSeries);
+                    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+                    let chartBlob = null;
+                    try {
+                      if (aiExportChartRef.current && typeof aiExportChartRef.current.capturePng === 'function') {
+                        chartBlob = await aiExportChartRef.current.capturePng();
+                      }
+                    } catch (e) {
+                      chartBlob = null;
+                    }
+
+                    const form = new FormData();
+                    form.append('metric', used.metric || 'ph');
+                    form.append('format', 'docx');
+                    form.append('granularity', used.granularity || 'week');
+                    if (used.start) form.append('start', used.start);
+                    if (used.end) form.append('end', used.end);
+                    if (used.device_id) form.append('device_id', parseInt(used.device_id));
+                    if (used.city_id) form.append('city_id', parseInt(used.city_id));
+                    if (chartBlob) {
+                      form.append('charts[]', chartBlob, 'chart.png');
+                    }
+
+                const response = await api.exportarReportesForm(form);
+                const id = response?.activity_id;
+                notify.success(response?.mensaje ?? 'Exportación Word generada.', {
+                  title: 'Reportes',
+                  actions: id ? [{ label: 'Descargar', onClick: () => { window.location.href = `/api/reportes/export/download/${id}`; } }] : [],
+                });
+              } catch (err) {
+                notify.error(err.message ?? 'No se pudo preparar la exportación.', { title: 'Reportes' });
+              } finally {
+                setActionLoading(null);
+              }
+            }}
             disabled={actionLoading !== null || (!isAdminUser && !hasAssignedDevices)}
           >
-            {actionLoading === "export-docx" ? "Preparando Word..." : "Exportar IA a Word"}
+            {actionLoading === 'export-docx' ? 'Preparando Word...' : 'Exportar IA a Word'}
           </button>
 
           {aiEjecutada && aiResult && (
@@ -601,6 +658,7 @@ export default function ReportesPanel() {
               {/* ChartComponent and TableComponent accept external `data` prop if provided */}
               <div style={{ marginBottom: "1rem" }}>
                 <ChartComponent
+                  ref={chartRef}
                   data={seriesRows.map((s, idx) => ({ 
                     fecha: s.label, 
                     ph: s.value,
@@ -611,7 +669,6 @@ export default function ReportesPanel() {
                   setResultFiltros={setResultFiltros}
                   onRunQuery={ejecutarConsulta}
                   onExport={ejecutarExportacion}
-                  onIa={ejecutarResumenIa}
                   devices={devices}
                   />
               </div>
@@ -636,7 +693,7 @@ export default function ReportesPanel() {
                   setResultFiltros={setResultFiltros}
                   onRunQuery={ejecutarConsulta}
                   onExport={ejecutarExportacion}
-                  onIa={ejecutarResumenIa}
+                  
                   devices={devices}
                 />
               </div>
@@ -644,6 +701,18 @@ export default function ReportesPanel() {
           </section>
         </div>
       )}
+
+      <div
+        style={{ position: "absolute", left: "-10000px", top: 0, width: 640, height: 280, overflow: "hidden", pointerEvents: "none" }}
+        aria-hidden="true"
+      >
+        <ChartComponent
+          ref={aiExportChartRef}
+          data={aiExportChartData}
+          title={`Vista previa IA — ${aiFilters.metric.toUpperCase()} ${GRANULARITY_SINGULAR[aiFilters.granularity] || ""}`}
+          devices={devices}
+        />
+      </div>
     </section>
   );
 }

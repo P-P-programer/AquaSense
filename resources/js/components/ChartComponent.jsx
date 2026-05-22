@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+
 
 function buildSmoothPath(points) {
   if (!points.length) return "";
@@ -32,9 +30,14 @@ function toShortTimeLabel(value) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ChartComponent({ data: externalData = null, title = null, limit = 10, resultFiltros = null, setResultFiltros = null, onRunQuery = null, onExport = null, onIa = null, devices = [] }) {
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+
+export default forwardRef(function ChartComponent({ data: externalData = null, title = null, limit = 10, resultFiltros = null, setResultFiltros = null, onRunQuery = null, onExport = null, onIa = null, devices = [] }, ref) {
   const { user } = useAuth();
   const isAdminUser = user?.role === "admin";
+  const svgRef = useRef(null);
   const [data,  setData]  = useState(Array.isArray(externalData) ? externalData.slice(0, limit) : []);
   const [cities, setCities] = useState([]);
   const [safeRange, setSafeRange] = useState({ safeMin: null, safeMax: null });
@@ -122,6 +125,40 @@ export default function ChartComponent({ data: externalData = null, title = null
   useEffect(() => {
     if (resultFiltros) setLocalFilters(resultFiltros);
   }, [resultFiltros]);
+
+  useImperativeHandle(ref, () => ({
+    capturePng: async () => {
+      if (!svgRef.current) throw new Error('SVG not available');
+
+      const svgNode = svgRef.current;
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(svgNode);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = (e) => reject(new Error('Error loading SVG as image'));
+          image.src = url;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = svgNode.viewBox.baseVal.width || 640;
+        canvas.height = svgNode.viewBox.baseVal.height || 280;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.92));
+        return blob;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+  }));
 
   useEffect(() => {
     if (!isAdminUser) {
@@ -348,21 +385,27 @@ export default function ChartComponent({ data: externalData = null, title = null
           </div>
 
           <div style={{ marginLeft: "auto", display: "flex", gap: "0.4rem" }}>
-            <button
-              type="button"
-              className="aq-btn-secondary"
-              onClick={() => onExport ? onExport("xlsx", localFilters) : null}
-            >Exportar Excel</button>
-            <button
-              type="button"
-              className="aq-btn-secondary"
-              onClick={() => onExport ? onExport("docx", localFilters) : null}
-            >Exportar Word</button>
-            <button
-              type="button"
-              className="aq-btn-secondary"
-              onClick={() => onIa ? onIa(localFilters) : null}
-            >Resumen IA</button>
+            {onExport && (
+              <>
+                <button
+                  type="button"
+                  className="aq-btn-secondary"
+                  onClick={() => onExport("xlsx", localFilters)}
+                >Exportar Excel</button>
+                <button
+                  type="button"
+                  className="aq-btn-secondary"
+                  onClick={() => onExport("docx", localFilters)}
+                >Exportar Word</button>
+              </>
+            )}
+            {onIa && (
+              <button
+                type="button"
+                className="aq-btn-secondary"
+                onClick={() => onIa(localFilters)}
+              >Resumen IA</button>
+            )}
           </div>
         </div>
       )}
@@ -458,7 +501,7 @@ export default function ChartComponent({ data: externalData = null, title = null
           </div>
 
           <div className="aq-linechart-canvas">
-            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
+            <svg ref={svgRef} viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
               <defs>
                 <linearGradient id="phLineGradient" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor="var(--azul-profundo)" />
@@ -583,3 +626,5 @@ export default function ChartComponent({ data: externalData = null, title = null
     </div>
   );
 }
+
+);
