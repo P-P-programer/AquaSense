@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Build assets
         env:
@@ -27,8 +27,10 @@ jobs:
           VITE_APP_ENV: "production"
           VITE_SW_VERSION: ${{ github.sha }}
         run: |
-          npm ci
-          npm run build
+          corepack enable
+          corepack prepare pnpm@11.2.2 --activate
+          pnpm install --frozen-lockfile
+          pnpm run build
 
       - name: Upload build to temp folder
         uses: appleboy/scp-action@v0.1.7
