@@ -5,7 +5,7 @@ AquaSense es una aplicación web (Laravel backend + React/Vite frontend) que fun
 **Requisitos mínimos**
 - PHP 8.1+
 - Composer
-- Node.js 18+ y npm (o pnpm)
+- Node.js 18+ y pnpm (recomendado)
 - Base de datos compatible (MySQL / MariaDB recomendados)
 - HTTPS en producción (service workers y Web Push requieren origen seguro). `localhost` es seguro para desarrollo.
 
@@ -27,7 +27,7 @@ cp .env.example .env
 
 ```bash
 composer install
-npm install
+pnpm install
 ```
 
 4. Genera la `APP_KEY`:
@@ -45,14 +45,26 @@ php artisan migrate --seed
 6. En desarrollo: arranca Vite:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 En producción: construye los assets:
 
 ```bash
-npm run build
+pnpm run build
 ```
+
+## Migración a pnpm
+
+Si ya venías usando `npm`, el cambio recomendado es:
+
+```bash
+corepack enable
+corepack prepare pnpm@11.2.2 --activate
+pnpm install
+```
+
+Después de eso, usa `pnpm run dev` y `pnpm run build` como comandos habituales.
 
 Si usas almacenamiento público, crea el enlace simbólico:
 
