@@ -21,14 +21,17 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
+      - name: Install pnpm
+        run: |
+          npm install -g pnpm@11.2.2
+          pnpm --version
+
       - name: Build assets
         env:
           VITE_ENABLE_PWA: "true"
           VITE_APP_ENV: "production"
           VITE_SW_VERSION: ${{ github.sha }}
         run: |
-          corepack enable
-          corepack prepare pnpm@11.2.2 --activate
           pnpm install --frozen-lockfile
           pnpm run build
 
