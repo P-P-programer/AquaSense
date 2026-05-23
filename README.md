@@ -60,7 +60,7 @@ Si ya venías usando `npm`, el cambio recomendado es:
 
 ```bash
 corepack enable
-corepack prepare pnpm@11.2.2 --activate
+corepack prepare pnpm@10.24.0 --activate
 pnpm install
 ```
 
