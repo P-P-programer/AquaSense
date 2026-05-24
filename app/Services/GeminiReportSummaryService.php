@@ -7,17 +7,43 @@ use RuntimeException;
 
 class GeminiReportSummaryService
 {
-    public function generateSummary(string $systemPrompt, string $userPrompt): string
+    public function generateSummary(string $systemPrompt, string $userPrompt, array $imagePaths = []): string
     {
         $apiKey = (string) config('services.gemini.api_key', '');
         $model = (string) config('services.gemini.model', 'gemini-2.5-flash');
         $baseUrl = rtrim((string) config('services.gemini.base_url', 'https://generativelanguage.googleapis.com'), '/');
         $timeout = (int) config('services.gemini.timeout_seconds', 20);
         $temperature = (float) config('services.gemini.temperature', 0.2);
-        $maxOutputTokens = (int) config('services.gemini.max_output_tokens', 900);
+        $maxOutputTokens = (int) config('services.gemini.max_output_tokens', 1400);
 
         if ($apiKey === '') {
             throw new RuntimeException('Gemini API key no configurada.');
+        }
+
+        $parts = [
+            [
+                'text' => $systemPrompt."\n\n".$userPrompt,
+            ],
+        ];
+
+        foreach ($imagePaths as $imagePath) {
+            if (! is_string($imagePath) || ! is_file($imagePath)) {
+                continue;
+            }
+
+            $mimeType = mime_content_type($imagePath) ?: 'image/png';
+            $binary = file_get_contents($imagePath);
+
+            if ($binary === false) {
+                continue;
+            }
+
+            $parts[] = [
+                'inlineData' => [
+                    'mimeType' => $mimeType,
+                    'data' => base64_encode($binary),
+                ],
+            ];
         }
 
         $response = Http::timeout($timeout)
@@ -28,11 +54,7 @@ class GeminiReportSummaryService
             ->post("{$baseUrl}/v1beta/models/{$model}:generateContent", [
                 'contents' => [
                     [
-                        'parts' => [
-                            [
-                                'text' => $systemPrompt."\n\n".$userPrompt,
-                            ],
-                        ],
+                        'parts' => $parts,
                     ],
                 ],
                 'generationConfig' => [
