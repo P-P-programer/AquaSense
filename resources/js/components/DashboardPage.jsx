@@ -93,6 +93,67 @@ function NotificationDropdown({
   );
 }
 
+function isDeviceOnline(lastSeenAt) {
+  if (!lastSeenAt) return false;
+  const diffMs = Date.now() - new Date(lastSeenAt).getTime();
+  return diffMs <= 60000;
+}
+
+function getEsp32Status(devices) {
+  const total = Array.isArray(devices) ? devices.length : 0;
+  const online = Array.isArray(devices) ? devices.filter((device) => isDeviceOnline(device?.last_seen_at)).length : 0;
+
+  if (total === 0) {
+    return {
+      label: "Sin ESP32 asignados",
+      detail: "No hay dispositivos vinculados a esta sesión.",
+      tone: "neutral",
+      title: "No hay ESP32 asignados a este usuario",
+    };
+  }
+
+  if (total === 1) {
+    return online === 1
+      ? {
+          label: "ESP32 en línea",
+          detail: "1/1 dispositivo online",
+          tone: "success",
+          title: "El único ESP32 del usuario está en línea",
+        }
+      : {
+          label: "ESP32 sin señal",
+          detail: "1/1 dispositivo offline",
+          tone: "danger",
+          title: "El único ESP32 del usuario no reporta datos",
+        };
+  }
+
+  if (online === total) {
+    return {
+      label: "Todos en línea",
+      detail: `${online}/${total} dispositivos online`,
+      tone: "success",
+      title: "Todos los ESP32 del usuario están en línea",
+    };
+  }
+
+  if (online === 0) {
+    return {
+      label: "Ninguno en línea",
+      detail: `${online}/${total} dispositivos online`,
+      tone: "danger",
+      title: "Ningún ESP32 del usuario reporta datos",
+    };
+  }
+
+  return {
+    label: "No todos en línea",
+    detail: `${online}/${total} dispositivos online`,
+    tone: "warning",
+    title: "Solo parte de los ESP32 del usuario está en línea",
+  };
+}
+
 export default function DashboardPage() {
   const { user, logout, isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState("overview");
@@ -102,6 +163,7 @@ export default function DashboardPage() {
   const [loadingAlerts, setLoadingAlerts] = useState(false);
   const [resolvingAlertId, setResolvingAlertId] = useState(null);
   const [outboxState, setOutboxState] = useState(() => getOutboxSnapshot());
+  const [sessionDevices, setSessionDevices] = useState(() => user?.devices ?? []);
   const notifyRef = useRef(null);
 
   const sections = useMemo(() => {
@@ -194,6 +256,40 @@ export default function DashboardPage() {
   }, [notifyOpen]);
 
   useEffect(() => {
+    setSessionDevices(Array.isArray(user?.devices) ? user.devices : []);
+  }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshSessionDevices() {
+      if (!user?.id) return;
+
+      try {
+        const me = await api.me();
+        if (!cancelled) {
+          setSessionDevices(Array.isArray(me?.devices) ? me.devices : []);
+        }
+      } catch {
+        // Mantener el último estado conocido si no se puede refrescar.
+      }
+    }
+
+    refreshSessionDevices();
+
+    const intervalId = setInterval(refreshSessionDevices, 30000);
+    const handleFocus = () => refreshSessionDevices();
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     return subscribeOutboxStatus((snapshot) => {
       setOutboxState(snapshot);
     });
@@ -201,6 +297,7 @@ export default function DashboardPage() {
 
   const criticalCount = alerts.filter((alert) => alert.severity === "critica").length;
   const currentMeta = SECTION_META[activeSection] ?? SECTION_META.overview;
+  const esp32Status = getEsp32Status(sessionDevices);
 
   const outboxLabel = (() => {
     if (!outboxState.online) {
@@ -286,9 +383,10 @@ export default function DashboardPage() {
               {outboxLabel}
             </div>
 
-            <div className="aq-status-pill">
+            <div className={`aq-status-pill aq-status-pill-${esp32Status.tone}`} title={esp32Status.title}>
               <i className="bi bi-circle-fill"></i>
-              ESP32 en línea
+              {esp32Status.label}
+              <span className="aq-status-pill-detail">{esp32Status.detail}</span>
             </div>
 
             <button type="button" className="aq-topbar-icon aq-topbar-icon-hint aq-notify-trigger" onClick={() => setNotifyOpen((prev) => !prev)} aria-label="Notificaciones">
