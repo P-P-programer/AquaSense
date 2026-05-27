@@ -269,6 +269,54 @@ body {
   font-family: 'IBM Plex Mono', monospace;
 }
 
+.aq-status-pill-detail {
+  display: block;
+  margin-left: 0.1rem;
+  font-size: 0.68rem;
+  line-height: 1.05;
+  opacity: 0.82;
+}
+
+.aq-status-pill-success {
+  border-color: #86efac;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.aq-status-pill-success i {
+  color: #16a34a;
+}
+
+.aq-status-pill-warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.aq-status-pill-warning i {
+  color: #f59e0b;
+}
+
+.aq-status-pill-danger {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.aq-status-pill-danger i {
+  color: #ef4444;
+}
+
+.aq-status-pill-neutral {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.aq-status-pill-neutral i {
+  color: #64748b;
+}
+
 .aq-status-pill i {
   color: #16a34a;
   font-size: 0.45rem;

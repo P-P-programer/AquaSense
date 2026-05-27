@@ -111,6 +111,7 @@ Route::middleware('web')->group(function () {
                 'name',
                 'identifier',
                 'is_active',
+                'last_seen_at',
             ])->with('city:id,name,department'),
         ]);
 
